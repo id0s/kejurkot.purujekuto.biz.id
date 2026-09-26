@@ -55,6 +55,11 @@
             <a href="<?= base_url('piagam/cetak-event/' . $event['id']) ?>" target="_blank" class="btn btn-secondary-custom d-inline-flex align-items-center gap-1 shadow-sm">
                 <i class="bi bi-award-fill text-warning"></i> Cetak Piagam Juara
             </a>
+            <?php if (strcasecmp($event['babak'], 'Final') === 0 && !empty($pesertaList)): ?>
+                <a href="<?= base_url('hasil/reset-final/' . $event['id']) ?>" class="btn btn-outline-danger fw-bold d-inline-flex align-items-center gap-1 shadow-sm" onclick="return confirm('PERINGATAN:\nApakah Anda yakin ingin MERESET (MENGOSONGKAN) seluruh peserta di Babak Final ini?\n\nGunakan ini jika sebelumnya salah klik loloskan atau ingin mengulang seleksi dari babak penyisihan.')">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset Finalis
+                </a>
+            <?php endif; ?>
             <a href="<?= base_url('hasil/auto-rank/' . $event['id']) ?>" class="btn btn-primary-gradient" onclick="return confirm('Hitung otomatis ranking 1, 2, 3 dan medali berdasarkan catatan prestasi yang telah diinput?')">
                 <i class="bi bi-magic me-1"></i> Auto Ranking & Medali
             </a>
@@ -62,22 +67,67 @@
     </div>
 </div>
 
-<?php if (strcasecmp($event['babak'], 'Penyisihan') === 0): ?>
-    <div class="alert alert-info py-3 px-4 mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 shadow-sm" style="background: linear-gradient(135deg, rgba(0, 82, 204, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%); border: 1px solid #B3D4FF; border-left: 5px solid #0052CC !important; border-radius: 4px;">
+<?php if (!empty($penyisihanEvent)): ?>
+    <div class="alert alert-secondary py-2 px-3 mb-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 border-0 shadow-sm" style="background: rgba(148, 163, 184, 0.15); border-left: 4px solid #38bdf8 !important;">
         <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-primary fw-bold">BABAK PENYISIHAN</span>
-                <strong class="text-dark">Kualifikasi ke Babak Final Otomatis</strong>
-            </div>
-            <p class="mb-0 text-muted small">
-                Setelah catatan waktu penyisihan diinput, Anda dapat langsung meloloskan 8 pelari tercepat ke <strong>Babak Final</strong>. Nomor lintasan 1 s/d 8 akan diatur secara otomatis sesuai unggulan atletik resmi.
-            </p>
+            <i class="bi bi-link-45deg text-info fs-5 me-1"></i>
+            Nomor lomba ini memiliki Babak Penyisihan: <strong>Acara #<?= $penyisihanEvent['nomor_acara'] ?> (<?= esc($penyisihanEvent['nama_acara']) ?>)</strong>.
         </div>
-        <a href="<?= base_url('hasil/qualify-to-final/' . $event['id']) ?>" class="btn btn-primary fw-bold text-nowrap d-inline-flex align-items-center gap-2 shadow-sm px-3" onclick="return confirm('Loloskan 8 pelari tercepat dari babak penyisihan ini ke Babak Final? Nomor acara Final dan lintasan akan dibuatkan otomatis.')">
-            <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
-            <span>Loloskan 8 Terbaik ke Babak Final &rarr;</span>
-        </a>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="<?= base_url('hasil/input/' . $penyisihanEvent['id']) ?>" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-box-arrow-left me-1"></i> Buka Penyisihan #<?= $penyisihanEvent['nomor_acara'] ?>
+            </a>
+            <?php if (!empty($pesertaList)): ?>
+                <a href="<?= base_url('hasil/reset-final/' . $event['id']) ?>" class="btn btn-sm btn-danger fw-bold" onclick="return confirm('PERINGATAN:\nApakah Anda yakin ingin MENGOSONGKAN (RESET) seluruh peserta di Babak Final ini?\n\nGunakan ini jika sebelumnya salah klik atau ingin merevisi input penyisihan.')">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Peserta Final (0 Atlet)
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
+<?php endif; ?>
+
+<?php if (strcasecmp($event['babak'], 'Penyisihan') === 0): ?>
+    <?php if (!empty($finalEvent) && $finalPesertaCount > 0): ?>
+        <div class="alert alert-warning py-3 px-4 mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 shadow-sm" style="border-left: 5px solid #f59e0b !important; border-radius: 4px; background: rgba(245, 158, 11, 0.15);">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-check-circle-fill me-1"></i> FINAL SUDAH DIGENERATE</span>
+                    <strong class="text-white">Babak Final (Acara #<?= $finalEvent['nomor_acara'] ?>) Berisi <?= $finalPesertaCount ?> Atlet</strong>
+                </div>
+                <p class="mb-0 text-muted small">
+                    Atlet tercepat telah diloloskan ke Babak Final. Jika ada <strong>salah klik</strong> atau <strong>salah input waktu</strong> pada penyisihan, silakan reset peserta babak final untuk mengosongkannya kembali (0 atlet).
+                </p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="<?= base_url('hasil/input/' . $finalEvent['id']) ?>" class="btn btn-info text-dark fw-bold text-nowrap d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                    <i class="bi bi-box-arrow-up-right"></i> Buka Acara Final #<?= $finalEvent['nomor_acara'] ?>
+                </a>
+                <a href="<?= base_url('hasil/reset-final/' . $event['id']) ?>" class="btn btn-danger fw-bold text-nowrap d-inline-flex align-items-center gap-2 shadow-sm px-3" onclick="return confirm('PERINGATAN:\nApakah Anda yakin ingin MERESET Babak Final (Acara #<?= $finalEvent['nomor_acara'] ?>)?\n\nPeserta babak final akan dikosongkan (0 atlet) agar Anda dapat memperbaiki nilai penyisihan ini lalu meloloskan ulang atlet yang benar.')">
+                    <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                    <span>Reset Final (Acara #<?= $finalEvent['nomor_acara'] ?>)</span>
+                </a>
+                <a href="<?= base_url('hasil/qualify-to-final/' . $event['id']) ?>" class="btn btn-outline-warning fw-bold text-nowrap d-inline-flex align-items-center gap-1 shadow-sm px-3" onclick="return confirm('Perbarui/Loloskan ulang atlet ke Babak Final sekarang?')">
+                    <i class="bi bi-arrow-repeat"></i> Perbarui Final
+                </a>
+            </div>
+        </div>
+    <?php else: ?>
+        <div class="alert alert-info py-3 px-4 mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 shadow-sm" style="background: linear-gradient(135deg, rgba(0, 82, 204, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%); border: 1px solid #B3D4FF; border-left: 5px solid #0052CC !important; border-radius: 4px;">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-primary fw-bold">BABAK PENYISIHAN</span>
+                    <strong class="text-white">Kualifikasi ke Babak Final Otomatis</strong>
+                </div>
+                <p class="mb-0 text-muted small">
+                    Setelah catatan waktu penyisihan diinput, Anda dapat langsung meloloskan 8 pelari tercepat ke <strong>Babak Final</strong>. Nomor lintasan 1 s/d 8 akan diatur secara otomatis sesuai unggulan atletik resmi.
+                </p>
+            </div>
+            <a href="<?= base_url('hasil/qualify-to-final/' . $event['id']) ?>" class="btn btn-primary fw-bold text-nowrap d-inline-flex align-items-center gap-2 shadow-sm px-3" onclick="return confirm('Loloskan 8 pelari tercepat dari babak penyisihan ini ke Babak Final? Nomor acara Final dan lintasan akan dibuatkan otomatis.')">
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                <span>Loloskan 8 Terbaik ke Babak Final &rarr;</span>
+            </a>
+        </div>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php if ($isFieldEvent ?? false): ?>

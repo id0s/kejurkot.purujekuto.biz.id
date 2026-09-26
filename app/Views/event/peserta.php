@@ -88,6 +88,11 @@ $unitPeserta = $isEstafetEvent ? 'Team' : 'Atlet';
             <a href="<?= base_url('hasil/input/' . $event['id']) ?>" class="btn btn-success d-inline-flex align-items-center gap-1">
                 <i class="bi bi-stopwatch-fill"></i> Input Hasil
             </a>
+            <?php if (strcasecmp($event['babak'], 'Final') === 0 && !empty($pesertaList)): ?>
+                <a href="<?= base_url('hasil/reset-final/' . $event['id']) ?>" class="btn btn-outline-danger fw-bold d-inline-flex align-items-center gap-1 shadow-sm" onclick="return confirm('PERINGATAN:\nApakah Anda yakin ingin MENGOSONGKAN (RESET) seluruh peserta di Babak Final ini?\n\nGunakan ini jika sebelumnya salah klik loloskan atau ingin mengulang seleksi.')">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset Finalis
+                </a>
+            <?php endif; ?>
         </div>
     </div>
 </div>

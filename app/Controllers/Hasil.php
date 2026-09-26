@@ -52,13 +52,42 @@ class Hasil extends BaseController
         }
         unset($p);
 
-        $this->data['title']        = "Input Hasil Acara {$event['nomor_acara']}: {$event['nama_acara']}";
-        $this->data['event']        = $event;
-        $this->data['pesertaList']  = $pesertaList;
-        $this->data['isFieldEvent'] = $isField;
+        $penyisihanEvent   = null;
+        $finalEvent        = null;
+        $finalPesertaCount = 0;
+
+        if (strcasecmp($event['babak'], 'Final') === 0) {
+            $penyisihanEvent = $this->eventModel->where([
+                'kejuaraan_id'     => $event['kejuaraan_id'],
+                'nomor_lomba_id'   => $event['nomor_lomba_id'],
+                'kelompok_umur_id' => $event['kelompok_umur_id'],
+                'gender'           => $event['gender'],
+                'babak'            => 'Penyisihan',
+            ])->first();
+        } elseif (strcasecmp($event['babak'], 'Penyisihan') === 0) {
+            $finalEvent = $this->eventModel->where([
+                'kejuaraan_id'     => $event['kejuaraan_id'],
+                'nomor_lomba_id'   => $event['nomor_lomba_id'],
+                'kelompok_umur_id' => $event['kelompok_umur_id'],
+                'gender'           => $event['gender'],
+                'babak'            => 'Final',
+            ])->first();
+            if ($finalEvent) {
+                $finalPesertaCount = $this->pesertaModel->where('event_id', $finalEvent['id'])->countAllResults();
+            }
+        }
+
+        $this->data['title']             = "Input Hasil Acara {$event['nomor_acara']}: {$event['nama_acara']}";
+        $this->data['event']             = $event;
+        $this->data['pesertaList']       = $pesertaList;
+        $this->data['isFieldEvent']      = $isField;
+        $this->data['penyisihanEvent']   = $penyisihanEvent;
+        $this->data['finalEvent']        = $finalEvent;
+        $this->data['finalPesertaCount'] = $finalPesertaCount;
 
         return view('hasil/input', $this->data);
     }
+
 
     public function save(int $eventId)
     {
@@ -314,6 +343,110 @@ class Hasil extends BaseController
 
         return redirect()->to(base_url('hasil/input/' . $finalEventId))
             ->with('success', "Sukses! " . count($qualifiers) . " atlet terbaik dari Babak Penyisihan berhasil diloloskan ke Babak Final (Acara #{$finalEventId}). Lintasan telah diatur otomatis.");
+    }
+
+    /**
+     * Reset Babak Final: Kosongkan seluruh peserta dan hasil di Babak Final.
+     * Dapat dipanggil dari Acara Final langsung, atau dari Acara Penyisihan terkait.
+     * Jaga-jaga jika panitia salah klik loloskan atau ingin merevisi input nilai penyisihan.
+     */
+    public function resetFinal(int $eventId)
+    {
+        $event = $this->eventModel->find($eventId);
+        if (!$event) {
+            return redirect()->to(base_url('hasil'))->with('error', 'Acara tidak ditemukan.');
+        }
+
+        $db = \Config\Database::connect();
+        $targetFinalEvent = null;
+        $penyisihanEvent  = null;
+
+        if (strcasecmp($event['babak'], 'Final') === 0) {
+            $targetFinalEvent = $event;
+            // Cari babak penyisihan terkait jika ada
+            $penyisihanEvent = $this->eventModel->where([
+                'kejuaraan_id'     => $event['kejuaraan_id'],
+                'nomor_lomba_id'   => $event['nomor_lomba_id'],
+                'kelompok_umur_id' => $event['kelompok_umur_id'],
+                'gender'           => $event['gender'],
+                'babak'            => 'Penyisihan',
+            ])->first();
+        } else {
+            // Dipanggil dari babak Penyisihan
+            $penyisihanEvent = $event;
+            $targetFinalEvent = $this->eventModel->where([
+                'kejuaraan_id'     => $event['kejuaraan_id'],
+                'nomor_lomba_id'   => $event['nomor_lomba_id'],
+                'kelompok_umur_id' => $event['kelompok_umur_id'],
+                'gender'           => $event['gender'],
+                'babak'            => 'Final',
+            ])->first();
+        }
+
+        if (!$targetFinalEvent) {
+            return redirect()->back()->with('error', 'Acara Babak Final tidak ditemukan untuk nomor lomba ini.');
+        }
+
+        $finalId = $targetFinalEvent['id'];
+
+        // 1. Hapus catatan hasil dari peserta di babak final
+        $pesertaIds = $db->table('peserta_event')
+            ->select('id')
+            ->where('event_id', $finalId)
+            ->get()->getResultArray();
+
+        if (!empty($pesertaIds)) {
+            $ids = array_column($pesertaIds, 'id');
+            $db->table('hasil')->whereIn('peserta_event_id', $ids)->delete();
+        }
+
+        // 2. Kosongkan peserta di babak final
+        $this->pesertaModel->where('event_id', $finalId)->delete();
+
+        // 3. Reset status acara final kembali ke Belum Dimulai
+        $this->eventModel->update($finalId, ['status' => 'Belum Dimulai']);
+
+        // 4. Jika ada babak penyisihan dan statusnya 'Selesai', kembalikan ke 'Berlangsung' agar bisa diedit
+        if ($penyisihanEvent && strcasecmp($penyisihanEvent['status'], 'Selesai') === 0) {
+            $this->eventModel->update($penyisihanEvent['id'], ['status' => 'Berlangsung']);
+        }
+
+        // 5. Invalidate cache Excel
+        @unlink(FCPATH . 'downloads' . DIRECTORY_SEPARATOR . 'Buku_Acara_Kejurwil_Atletik.xlsx');
+        @unlink(FCPATH . 'downloads' . DIRECTORY_SEPARATOR . 'Buku_Acara_Kejurkot_Atletik.xlsx');
+
+        $msg = "Sukses! Babak Final Acara #{$targetFinalEvent['nomor_acara']} ({$targetFinalEvent['nama_acara']}) berhasil di-reset menjadi 0 atlet.";
+        if ($penyisihanEvent && $eventId == $penyisihanEvent['id']) {
+            $msg .= " Anda kini dapat memperbaiki input hasil penyisihan lalu meloloskan ulang atlet terbaik ke Final.";
+        }
+
+        return redirect()->to(base_url('hasil/input/' . $eventId))->with('success', $msg);
+    }
+
+    /**
+     * Reset seluruh catatan hasil peserta pada acara tertentu
+     */
+    public function reset(int $eventId)
+    {
+        $event = $this->eventModel->find($eventId);
+        if (!$event) {
+            return redirect()->to(base_url('hasil'))->with('error', 'Acara tidak ditemukan.');
+        }
+
+        $db = \Config\Database::connect();
+        $pesertaIds = $db->table('peserta_event')
+            ->select('id')
+            ->where('event_id', $eventId)
+            ->get()->getResultArray();
+
+        if (!empty($pesertaIds)) {
+            $ids = array_column($pesertaIds, 'id');
+            $db->table('hasil')->whereIn('peserta_event_id', $ids)->delete();
+        }
+
+        $this->eventModel->update($eventId, ['status' => 'Belum Dimulai']);
+
+        return redirect()->back()->with('success', "Seluruh catatan hasil untuk Acara #{$event['nomor_acara']} ({$event['nama_acara']}) berhasil di-reset.");
     }
 
     /**

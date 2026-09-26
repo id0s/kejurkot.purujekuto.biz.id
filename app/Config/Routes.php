@@ -98,7 +98,8 @@ $routes->group('hasil', static function ($routes) {
     $routes->get('', 'Hasil::index');
     $routes->get('input/(:num)', 'Hasil::input/$1');
     $routes->post('save/(:num)', 'Hasil::save/$1');
-    $routes->post('reset/(:num)', 'Hasil::reset/$1');
+    $routes->match(['GET', 'POST'], 'reset/(:num)', 'Hasil::reset/$1');
+    $routes->match(['GET', 'POST'], 'reset-final/(:num)', 'Hasil::resetFinal/$1');
     $routes->get('auto-rank/(:num)', 'Hasil::autoRank/$1');
     $routes->get('form-lapangan/(:num)', 'Hasil::formLapangan/$1');
     $routes->get('cetak-hasil/(:num)', 'Hasil::cetakHasil/$1');

@@ -79,6 +79,11 @@
                                     <a href="<?= base_url('piagam?event_id=' . $ev['id']) ?>" class="btn btn-sm btn-secondary-custom" title="Lihat & Cetak Piagam Penghargaan">
                                         <i class="bi bi-award-fill text-warning"></i>
                                     </a>
+                                    <?php if (strcasecmp($ev['babak'], 'Final') === 0 && $ev['total_peserta'] > 0): ?>
+                                        <a href="<?= base_url('hasil/reset-final/' . $ev['id']) ?>" class="btn btn-sm btn-outline-danger" title="Reset Peserta Final (0 Atlet) - Jaga-jaga Salah Klik/Input" onclick="return confirm('Reset peserta Babak Final Acara <?= $ev['nomor_acara'] ?> (<?= esc($ev['nama_acara']) ?>)?\n\nPeserta babak final akan dikosongkan kembali menjadi 0 atlet.')">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
