@@ -1,0 +1,47 @@
+# Environment Configuration & Secrets
+.env
+.env.production
+.env.local
+
+# Backups & SQL Dumps (Contains sensitive personal participant data)
+_backup/
+backups/
+*.sql
+*.zip
+*.bak
+*.bak.*
+
+# Composer Dependencies
+/vendor/
+composer.phar
+
+# CodeIgniter Writable & Cache Files
+/writable/cache/*
+!/writable/cache/index.html
+/writable/debugbar/*
+!/writable/debugbar/index.html
+/writable/logs/*
+!/writable/logs/index.html
+/writable/session/*
+!/writable/session/index.html
+/writable/uploads/*
+!/writable/uploads/index.html
+
+# Generated Downloads
+/public/downloads/*
+!/public/downloads/index.html
+
+# Local IDE / OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.gemini/
+
+# Python Scratch Scripts
+*.pyc
+__pycache__/
+*.py

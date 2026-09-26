@@ -1,0 +1,1170 @@
+/* ==========================================================================
+   ATLASSIAN JIRA SAAS DESIGN SYSTEM — THEME FOR KEJURWIL ATLETIK
+   Inspired by Jira Cloud / Atlassian Design System (ADS)
+   ========================================================================== */
+
+:root, [data-bs-theme="light"] {
+    /* Atlassian Brand Palette */
+    --atlassian-blue: #0052CC;
+    --atlassian-blue-hover: #0065FF;
+    --atlassian-blue-active: #0747A6;
+    --atlassian-blue-subtle: #DEEBFF;
+    --atlassian-navy: #091E42;
+    --atlassian-charcoal: #172B4D;
+
+    /* Backgrounds */
+    --bg-body: #F4F5F7;
+    --bg-sidebar: #FAFBFC;
+    --bg-sidebar-hover: #EBECF0;
+    --bg-sidebar-active: #E9F2FF;
+    --bg-topbar: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #FFFFFF;
+    --bg-input: #FAFBFC;
+    --bg-input-focus: #FFFFFF;
+    --bg-subtle: #EBECF0;
+    --bg-table-th: #F4F5F7;
+    --bg-table-hover: #F4F5F7;
+    --bg-table-striped: #FAFBFC;
+
+    /* Borders */
+    --border-color: #DFE1E6;
+    --border-subtle: #EBECF0;
+    --border-focus: #4C9AFF;
+
+    /* Accents */
+    --primary-blue: #0052CC;
+    --primary-gradient: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
+    --accent-cyan: #00B8D9;
+    --accent-purple: #6554C0;
+    --accent-emerald: #36B37E;
+    --accent-amber: #FFAB00;
+    --accent-rose: #FF5630;
+
+    /* Text */
+    --text-main: #172B4D;
+    --text-secondary: #253858;
+    --text-muted: #5E6C84;
+    --text-subtle: #6B778C;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(9, 30, 66, 0.08);
+    --shadow-card: 0 1px 1px rgba(9, 30, 66, 0.15), 0 0 1px 1px rgba(9, 30, 66, 0.08);
+    --shadow-card-hover: 0 3px 6px rgba(9, 30, 66, 0.15);
+    --shadow-dropdown: 0 4px 16px rgba(9, 30, 66, 0.15);
+    --shadow-topbar: 0 1px 2px rgba(9, 30, 66, 0.05);
+
+    /* Layout Dimensions */
+    --sidebar-width: 260px;
+    --topbar-height: 56px;
+    --transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Bootstrap Light Variable Overrides */
+    --bs-body-bg: #F4F5F7 !important;
+    --bs-body-color: #172B4D !important;
+    --bs-secondary-color: #5E6C84 !important;
+    --bs-tertiary-color: #6B778C !important;
+    --bs-emphasis-color: #172B4D !important;
+    --bs-border-color: #DFE1E6 !important;
+    --bs-card-bg: #FFFFFF !important;
+    --bs-card-border-color: #DFE1E6 !important;
+    --bs-card-color: #172B4D !important;
+    --bs-table-bg: #FFFFFF !important;
+    --bs-table-color: #172B4D !important;
+    --bs-table-striped-bg: #FAFBFC !important;
+    --bs-table-hover-bg: #F4F5F7 !important;
+    --bs-table-hover-color: #172B4D !important;
+    --bs-table-border-color: #EBECF0 !important;
+}
+
+[data-bs-theme="dark"], body.dark-theme {
+    /* Apple Cupertino OLED Dark Mode Palette (spmb.smk2pekalongan.sch.id reference) */
+    --atlassian-blue: #0A84FF;
+    --atlassian-blue-hover: #409CFF;
+    --atlassian-blue-active: #0064D2;
+    --atlassian-blue-subtle: rgba(10, 132, 255, 0.14);
+    --atlassian-navy: #0A0A0C;
+    --atlassian-charcoal: #F5F5F7;
+
+    /* Backgrounds - Refined Apple OLED Surfaces */
+    --bg-body: #0A0A0C;
+    --bg-sidebar: #141418;
+    --bg-sidebar-hover: #1C1C1E;
+    --bg-sidebar-active: rgba(10, 132, 255, 0.16);
+    --bg-topbar: rgba(20, 20, 24, 0.85);
+    --bg-card: #1C1C1E;
+    --bg-card-hover: #242428;
+    --bg-input: #1C1C1E;
+    --bg-input-focus: #242428;
+    --bg-subtle: #242428;
+    --bg-table-th: #18181C;
+    --bg-table-hover: rgba(10, 132, 255, 0.08);
+    --bg-table-striped: #141418;
+
+    /* Borders */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-focus: #0A84FF;
+
+    /* Accents */
+    --primary-blue: #0A84FF;
+    --primary-gradient: linear-gradient(135deg, #0A84FF 0%, #0064D2 100%);
+    --accent-cyan: #64D2FF;
+    --accent-purple: #BF5AF2;
+    --accent-emerald: #30D158;
+    --accent-amber: #FFD60A;
+    --accent-rose: #FF453A;
+
+    /* Text */
+    --text-main: #F5F5F7;
+    --text-secondary: #AEAEB2;
+    --text-muted: #8E8E93;
+    --text-subtle: #636366;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --shadow-card-hover: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(10, 132, 255, 0.25);
+    --shadow-dropdown: 0 12px 36px rgba(0, 0, 0, 0.65);
+    --shadow-topbar: 0 2px 10px rgba(0, 0, 0, 0.4);
+
+    /* Layout Dimensions */
+    --sidebar-width: 260px;
+    --topbar-height: 56px;
+    --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Bootstrap Dark Variable Overrides */
+    --bs-body-bg: #0A0A0C !important;
+    --bs-body-color: #F5F5F7 !important;
+    --bs-secondary-color: #AEAEB2 !important;
+    --bs-tertiary-color: #8E8E93 !important;
+    --bs-emphasis-color: #FFFFFF !important;
+    --bs-border-color: rgba(255, 255, 255, 0.08) !important;
+    --bs-card-bg: #1C1C1E !important;
+    --bs-card-border-color: rgba(255, 255, 255, 0.08) !important;
+    --bs-card-color: #F5F5F7 !important;
+    --bs-table-bg: #1C1C1E !important;
+    --bs-table-color: #F5F5F7 !important;
+    --bs-table-striped-bg: #141418 !important;
+    --bs-table-hover-bg: rgba(10, 132, 255, 0.08) !important;
+    --bs-table-hover-color: #FFFFFF !important;
+    --bs-table-border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ==========================================================================
+   GLOBAL RESET & TYPOGRAPHY
+   ========================================================================== */
+body {
+    background-color: var(--bg-body) !important;
+    color: var(--text-main) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-main) !important;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+a {
+    color: var(--atlassian-blue);
+    text-decoration: none;
+    transition: var(--transition);
+}
+a:hover {
+    color: var(--atlassian-blue-hover);
+}
+
+/* Text utility classes */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+body .text-white:not(.btn):not(.badge):not(.avatar):not(.alert),
+.text-white:not(.btn):not(.badge):not(.avatar):not(.alert) {
+    color: var(--text-main) !important; /* Invert legacy text-white classes to crisp dark text */
+}
+.text-dark-force {
+    color: var(--text-main) !important;
+}
+small, .small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #F4F5F7;
+}
+::-webkit-scrollbar-thumb {
+    background: #C1C7D0;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #A5ADBA;
+}
+
+/* ==========================================================================
+   LAYOUT STRUCTURE: JIRA SIDEBAR & MAIN CONTENT
+   ========================================================================== */
+#wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Sidebar: Jira Project Navigation */
+#sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition);
+}
+
+#main-content {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-body);
+    transition: var(--transition);
+}
+
+/* Sidebar Brand / Jira Project Avatar */
+.sidebar-brand {
+    height: var(--topbar-height);
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--border-color);
+    text-decoration: none;
+    background: var(--bg-sidebar);
+}
+.brand-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--atlassian-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.15);
+}
+.brand-text {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.2px;
+    color: var(--text-main);
+    margin-left: 0.65rem;
+    display: block;
+    line-height: 1.2;
+}
+.brand-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-left: 0.65rem;
+    letter-spacing: 0.2px;
+    font-weight: 500;
+}
+
+/* Sidebar Menu Items */
+.sidebar-menu {
+    padding: 0.75rem 0.5rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.menu-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0.85rem 0.75rem 0.35rem 0.75rem;
+    letter-spacing: 0.5px;
+}
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    font-size: 13.5px;
+    font-weight: 500;
+    margin-bottom: 0.15rem;
+    transition: var(--transition);
+    text-decoration: none;
+    position: relative;
+}
+.nav-link i {
+    font-size: 1.05rem;
+    margin-right: 0.75rem;
+    width: 18px;
+    text-align: center;
+    color: var(--text-muted);
+    transition: var(--transition);
+}
+.nav-link:hover {
+    color: var(--text-main);
+    background: var(--bg-sidebar-hover);
+}
+.nav-link:hover i {
+    color: var(--atlassian-blue);
+}
+.nav-link.active {
+    color: var(--atlassian-blue) !important;
+    background: var(--bg-sidebar-active) !important;
+    font-weight: 600;
+    box-shadow: none !important;
+}
+.nav-link.active i {
+    color: var(--atlassian-blue) !important;
+}
+
+/* ==========================================================================
+   TOPBAR: JIRA APPLICATION HEADER
+   ========================================================================== */
+#topbar {
+    height: var(--topbar-height);
+    background: var(--bg-topbar);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    box-shadow: var(--shadow-topbar);
+    transition: var(--transition);
+}
+
+/* ==========================================================================
+   CARDS & GADGETS (JIRA DASHBOARD GADGET STYLE)
+   ========================================================================== */
+.card-custom {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 4px;
+    box-shadow: var(--shadow-card);
+    transition: var(--transition);
+    color: var(--text-main) !important;
+    margin-bottom: 1.25rem;
+}
+.card-custom:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--border-focus) !important;
+}
+.card-custom .card-header {
+    background: var(--bg-card) !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    padding: 0.85rem 1.25rem;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-main) !important;
+    letter-spacing: -0.1px;
+}
+.card-custom .card-body {
+    padding: 1.25rem;
+    color: var(--text-main) !important;
+}
+
+/* Stat Cards (Metric Gadgets) */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    padding: 1.15rem 1.25rem;
+    border-radius: 4px;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-card);
+    transition: var(--transition);
+}
+.stat-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--border-focus) !important;
+}
+.stat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+.stat-val {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 0.35rem;
+    letter-spacing: -0.5px;
+    color: var(--text-main) !important;
+}
+.stat-label {
+    color: var(--text-muted) !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* ==========================================================================
+   JIRA LOZENGES (STATUS BADGES)
+   ========================================================================== */
+.badge,
+.badge-custom {
+    padding: 0.25rem 0.55rem;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: none !important;
+}
+
+/* Jira Blue Lozenge (In Progress / Info) */
+.badge-blue, .badge-primary {
+    background-color: #DEEBFF !important;
+    color: #0747A6 !important;
+}
+
+/* Jira Green Lozenge (Success / Done / Valid) */
+.badge-emerald, .badge-success {
+    background-color: #E3FCEF !important;
+    color: #006644 !important;
+}
+
+/* Jira Yellow / Amber Lozenge (Warning / Heat) */
+.badge-amber, .badge-warning {
+    background-color: #FFF0B3 !important;
+    color: #172B4D !important;
+}
+
+/* Jira Red Lozenge (Error / DQ / DNF) */
+.badge-rose, .badge-danger {
+    background-color: #FFEBE6 !important;
+    color: #BF2600 !important;
+}
+
+/* Jira Purple Lozenge (Category / Milestone) */
+.badge-purple {
+    background-color: #EAE6FF !important;
+    color: #403294 !important;
+}
+
+/* Jira Subtle Gray Lozenge */
+.badge-secondary {
+    background-color: #DFE1E6 !important;
+    color: #42526E !important;
+}
+
+/* Medals */
+.medal-gold {
+    background: #FFF0B3;
+    color: #172B4D !important;
+    border: 1px solid #FFE380;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+.medal-silver {
+    background: #EBECF0;
+    color: #42526E !important;
+    border: 1px solid #DFE1E6;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+.medal-bronze {
+    background: #FFEBE6;
+    color: #BF2600 !important;
+    border: 1px solid #FFBDAD;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   BUTTONS (ATLASSIAN BUTTONS)
+   ========================================================================== */
+.btn {
+    border-radius: 3px !important;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 0.4rem 0.85rem;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+/* Primary Button (Atlassian Blue) */
+.btn-primary,
+.btn-primary-gradient {
+    background: var(--atlassian-blue) !important;
+    background-color: var(--atlassian-blue) !important;
+    border: 1px solid var(--atlassian-blue) !important;
+    color: #FFFFFF !important;
+    box-shadow: none !important;
+}
+.btn-primary:hover,
+.btn-primary-gradient:hover {
+    background: var(--atlassian-blue-hover) !important;
+    background-color: var(--atlassian-blue-hover) !important;
+    border-color: var(--atlassian-blue-hover) !important;
+    color: #FFFFFF !important;
+}
+.btn-primary:active,
+.btn-primary-gradient:active {
+    background: var(--atlassian-blue-active) !important;
+    background-color: var(--atlassian-blue-active) !important;
+}
+
+/* Secondary / Subtle Button */
+.btn-secondary-custom,
+.btn-outline-secondary {
+    background: rgba(9, 30, 66, 0.04) !important;
+    color: #42526E !important;
+    border: 1px solid rgba(9, 30, 66, 0.08) !important;
+}
+.btn-secondary-custom:hover,
+.btn-outline-secondary:hover {
+    background: rgba(9, 30, 66, 0.08) !important;
+    color: var(--text-main) !important;
+    border-color: rgba(9, 30, 66, 0.15) !important;
+}
+
+/* Action Icon Buttons */
+.btn-action {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    background: rgba(9, 30, 66, 0.04);
+    color: #5E6C84;
+    border: 1px solid transparent;
+}
+.btn-action:hover {
+    background: rgba(9, 30, 66, 0.08);
+    color: var(--atlassian-blue);
+}
+
+/* ==========================================================================
+   FORMS & INPUTS
+   ========================================================================== */
+.form-control, .form-select {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    border-radius: 3px;
+    padding: 0.45rem 0.75rem;
+    font-size: 13.5px;
+    transition: var(--transition);
+}
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-input-focus) !important;
+    border-color: var(--border-focus) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.25) !important;
+    outline: none;
+}
+.form-control::placeholder {
+    color: var(--text-subtle) !important;
+}
+.form-label {
+    font-weight: 600;
+    color: var(--text-muted) !important;
+    margin-bottom: 0.35rem;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.input-group-text {
+    background-color: var(--bg-subtle) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-muted) !important;
+    font-size: 13.5px;
+    border-radius: 3px;
+}
+
+/* ==========================================================================
+   TABLES (JIRA ISSUE LIST STYLE)
+   ========================================================================== */
+.table,
+.table-dark-custom {
+    --bs-table-bg: var(--bg-card) !important;
+    --bs-table-color: var(--text-main) !important;
+    --bs-table-striped-bg: var(--bg-table-striped) !important;
+    --bs-table-hover-bg: var(--bg-table-hover) !important;
+    --bs-table-hover-color: var(--text-main) !important;
+    --bs-table-border-color: var(--border-subtle) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-subtle) !important;
+    margin-bottom: 0;
+    font-size: 13.5px;
+}
+
+.table > :not(caption) > * > *,
+.table-dark-custom > :not(caption) > * > * {
+    background-color: transparent !important;
+    color: var(--text-main) !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    padding: 0.65rem 0.85rem;
+    vertical-align: middle;
+}
+
+.table thead th,
+.table-dark-custom thead th {
+    background-color: var(--bg-table-th) !important;
+    color: var(--text-muted) !important;
+    border-bottom: 2px solid var(--border-color) !important;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0.65rem 0.85rem;
+    white-space: nowrap;
+}
+
+.table tbody tr:hover td,
+.table-dark-custom tbody tr:hover td {
+    background-color: var(--bg-table-hover) !important;
+}
+
+/* DataTables Jira Style */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 0.85rem;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+.dataTables_wrapper .dataTables_filter input {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    border-radius: 3px;
+    padding: 0.35rem 0.65rem;
+    font-size: 13px;
+    margin-left: 0.5rem;
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+    background-color: var(--bg-input-focus) !important;
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.25) !important;
+    outline: none;
+}
+.dataTables_wrapper .dataTables_info {
+    color: var(--text-muted) !important;
+    font-size: 12px;
+    padding-top: 0.75rem;
+}
+.dataTables_wrapper .dataTables_paginate {
+    padding-top: 0.75rem;
+}
+.page-link {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    border-radius: 3px !important;
+    margin: 0 2px;
+    font-size: 12.5px;
+    padding: 0.35rem 0.65rem;
+}
+.page-link:hover {
+    background-color: var(--bg-subtle) !important;
+    color: var(--text-main) !important;
+}
+.page-item.active .page-link {
+    background-color: var(--atlassian-blue) !important;
+    border-color: var(--atlassian-blue) !important;
+    color: #FFFFFF !important;
+}
+
+/* ==========================================================================
+   SELECT2 (JIRA DROPDOWN STYLE)
+   ========================================================================== */
+.select2-container {
+    width: 100% !important;
+}
+.select2-container--default .select2-selection--single {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 3px !important;
+    height: 38px !important;
+    padding: 0.35rem 0.65rem !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: var(--text-main) !important;
+    line-height: 24px !important;
+    padding-left: 0 !important;
+    font-size: 13.5px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+    right: 8px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--text-muted) transparent transparent transparent !important;
+}
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent var(--text-muted) transparent !important;
+}
+.select2-container--default .select2-selection--multiple {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 3px !important;
+    min-height: 38px !important;
+    padding: 0.25rem 0.45rem !important;
+}
+.select2-container--default.select2-container--focus .select2-selection--multiple,
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.25) !important;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background: var(--atlassian-blue-subtle) !important;
+    border: 1px solid var(--border-focus) !important;
+    color: var(--atlassian-blue) !important;
+    border-radius: 3px !important;
+    padding: 2px 8px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    margin: 2px 3px !important;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: var(--atlassian-blue) !important;
+    margin-right: 5px !important;
+    border-right: 1px solid var(--border-focus) !important;
+    padding-right: 3px !important;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: var(--accent-rose) !important;
+    background: transparent !important;
+}
+.select2-dropdown {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 3px !important;
+    box-shadow: var(--shadow-dropdown) !important;
+    overflow: hidden !important;
+    z-index: 9999 !important;
+}
+.select2-container--default .select2-search--dropdown {
+    padding: 6px !important;
+    background: var(--bg-subtle) !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    border-radius: 3px !important;
+    padding: 5px 8px !important;
+    font-size: 13px !important;
+}
+.select2-container--default .select2-results__option {
+    color: var(--text-main) !important;
+    padding: 6px 12px !important;
+    font-size: 13.5px !important;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: var(--bg-sidebar-hover) !important;
+    color: var(--atlassian-blue) !important;
+}
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: var(--atlassian-blue-subtle) !important;
+    color: var(--atlassian-blue) !important;
+    font-weight: 600;
+}
+.select2-container--default .select2-search--inline .select2-search__field {
+    color: var(--text-main) !important;
+    font-size: 13px !important;
+}
+
+/* ==========================================================================
+   ALERTS (JIRA MESSAGES)
+   ========================================================================== */
+.alert {
+    border-radius: 3px;
+    border: none;
+    font-size: 13.5px;
+}
+.alert-success {
+    background-color: #E3FCEF !important;
+    color: #006644 !important;
+    border-left: 3px solid #36B37E !important;
+}
+.alert-danger {
+    background-color: #FFEBE6 !important;
+    color: #BF2600 !important;
+    border-left: 3px solid #FF5630 !important;
+}
+.alert-warning {
+    background-color: #FFF0B3 !important;
+    color: #172B4D !important;
+    border-left: 3px solid #FFAB00 !important;
+}
+
+/* ==========================================================================
+   SOLID DARK MODE EXPLICIT COMPONENT ENHANCEMENTS
+   ========================================================================== */
+[data-bs-theme="dark"] body {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+}
+
+[data-bs-theme="dark"] #wrapper,
+[data-bs-theme="dark"] #main-content {
+    background-color: #0F172A !important;
+}
+
+[data-bs-theme="dark"] #sidebar,
+body.dark-theme #sidebar {
+    background-color: #141418 !important;
+    border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-bs-theme="dark"] #topbar,
+body.dark-theme #topbar {
+    background-color: rgba(20, 20, 24, 0.85) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-bs-theme="dark"] .sidebar-brand,
+body.dark-theme .sidebar-brand {
+    background-color: #141418 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-bs-theme="dark"] .card-custom,
+[data-bs-theme="dark"] .stat-card,
+body.dark-theme .card-custom,
+body.dark-theme .stat-card {
+    background-color: #1C1C1E !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #F5F5F7 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .card-custom:hover,
+[data-bs-theme="dark"] .stat-card:hover,
+body.dark-theme .card-custom:hover,
+body.dark-theme .stat-card:hover {
+    border-color: rgba(10, 132, 255, 0.3) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-bs-theme="dark"] .card-custom .card-header,
+body.dark-theme .card-custom .card-header {
+    background-color: #1C1C1E !important;
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    color: #F5F5F7 !important;
+}
+
+[data-bs-theme="dark"] .modal-content,
+body.dark-theme .modal-content {
+    background-color: rgba(20, 20, 24, 0.96) !important;
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #F5F5F7 !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer,
+body.dark-theme .modal-header,
+body.dark-theme .modal-footer {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-bs-theme="dark"] .btn-close,
+body.dark-theme .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+[data-bs-theme="dark"] .btn-secondary-custom,
+body.dark-theme .btn-secondary-custom {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #AEAEB2 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .btn-secondary-custom:hover,
+body.dark-theme .btn-secondary-custom:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+    color: #FFFFFF !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .btn-action,
+body.dark-theme .btn-action {
+    background: rgba(255, 255, 255, 0.06);
+    color: #8E8E93;
+}
+
+[data-bs-theme="dark"] .btn-action:hover,
+body.dark-theme .btn-action:hover {
+    background: rgba(10, 132, 255, 0.15);
+    color: #0A84FF;
+}
+
+/* Badges / Lozenges in Dark Mode */
+[data-bs-theme="dark"] .badge-blue,
+[data-bs-theme="dark"] .badge-primary {
+    background-color: rgba(56, 139, 255, 0.2) !important;
+    color: #79B8FF !important;
+}
+
+[data-bs-theme="dark"] .badge-emerald,
+[data-bs-theme="dark"] .badge-success {
+    background-color: rgba(87, 217, 163, 0.2) !important;
+    color: #7EE787 !important;
+}
+
+[data-bs-theme="dark"] .badge-amber,
+[data-bs-theme="dark"] .badge-warning {
+    background-color: rgba(255, 196, 0, 0.2) !important;
+    color: #FFD33D !important;
+}
+
+[data-bs-theme="dark"] .badge-rose,
+[data-bs-theme="dark"] .badge-danger {
+    background-color: rgba(255, 116, 82, 0.2) !important;
+    color: #FFA198 !important;
+}
+
+[data-bs-theme="dark"] .badge-purple {
+    background-color: rgba(153, 141, 217, 0.2) !important;
+    color: #D2A8FF !important;
+}
+
+[data-bs-theme="dark"] .badge-secondary {
+    background-color: #334155 !important;
+    color: #CBD5E1 !important;
+}
+
+/* Alerts in Dark Mode */
+[data-bs-theme="dark"] .alert-success {
+    background-color: rgba(54, 179, 126, 0.16) !important;
+    color: #7EE787 !important;
+    border-left: 3px solid #36B37E !important;
+}
+
+[data-bs-theme="dark"] .alert-danger {
+    background-color: rgba(255, 86, 48, 0.16) !important;
+    color: #FFA198 !important;
+    border-left: 3px solid #FF5630 !important;
+}
+
+[data-bs-theme="dark"] .alert-warning {
+    background-color: rgba(255, 171, 0, 0.16) !important;
+    color: #FFD33D !important;
+    border-left: 3px solid #FFAB00 !important;
+}
+
+/* Medals in Dark Mode */
+[data-bs-theme="dark"] .medal-gold {
+    background: rgba(255, 196, 0, 0.2) !important;
+    color: #FFD33D !important;
+    border-color: rgba(255, 196, 0, 0.4) !important;
+}
+
+[data-bs-theme="dark"] .medal-silver {
+    background: rgba(203, 213, 225, 0.15) !important;
+    color: #E2E8F0 !important;
+    border-color: rgba(203, 213, 225, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .medal-bronze {
+    background: rgba(255, 116, 82, 0.18) !important;
+    color: #FFA198 !important;
+    border-color: rgba(255, 116, 82, 0.35) !important;
+}
+
+/* Scrollbars in Dark Mode */
+[data-bs-theme="dark"] ::-webkit-scrollbar-track {
+    background: #0F172A;
+}
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Dropdowns in Dark Mode */
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: #1E293B !important;
+    border: 1px solid #334155 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4) !important;
+}
+[data-bs-theme="dark"] .dropdown-item {
+    color: #F8FAFC !important;
+}
+[data-bs-theme="dark"] .dropdown-item:hover,
+[data-bs-theme="dark"] .dropdown-item:focus {
+    background-color: #334155 !important;
+    color: #388BFF !important;
+}
+[data-bs-theme="dark"] .dropdown-divider {
+    border-top-color: #334155 !important;
+}
+
+/* Pagination in Dark Mode */
+[data-bs-theme="dark"] .pagination .page-link {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #CBD5E1 !important;
+}
+[data-bs-theme="dark"] .pagination .page-link:hover {
+    background-color: #334155 !important;
+    color: #388BFF !important;
+    border-color: #475569 !important;
+}
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+    background-color: #0C66E4 !important;
+    border-color: #0C66E4 !important;
+    color: #FFFFFF !important;
+}
+[data-bs-theme="dark"] .pagination .page-item.disabled .page-link {
+    background-color: #162032 !important;
+    border-color: #243248 !important;
+    color: #64748B !important;
+}
+
+/* Accordions in Dark Mode */
+[data-bs-theme="dark"] .accordion-item {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+}
+[data-bs-theme="dark"] .accordion-button {
+    background-color: #1E293B !important;
+    color: #F8FAFC !important;
+}
+[data-bs-theme="dark"] .accordion-button:not(.collapsed) {
+    background-color: #162032 !important;
+    color: #388BFF !important;
+    box-shadow: inset 0 -1px 0 #334155 !important;
+}
+[data-bs-theme="dark"] .accordion-button::after {
+    filter: invert(1) brightness(1.5);
+}
+[data-bs-theme="dark"] .accordion-body {
+    background-color: #1E293B !important;
+    color: #CBD5E1 !important;
+}
+
+/* List Groups in Dark Mode */
+[data-bs-theme="dark"] .list-group-item {
+    background-color: #1E293B !important;
+    border-color: #334155 !important;
+    color: #F8FAFC !important;
+}
+
+/* Solid Utility Overrides in Dark Mode */
+[data-bs-theme="dark"] .bg-white:not(.btn):not(.badge):not(.badge-white):not(.piagam-preview):not(.piagam-canvas):not(.certificate-container) {
+    background-color: #1E293B !important;
+}
+[data-bs-theme="dark"] .bg-light:not(.btn):not(.badge) {
+    background-color: #162032 !important;
+}
+[data-bs-theme="dark"] .text-dark {
+    color: #F8FAFC !important;
+}
+[data-bs-theme="dark"] .border,
+[data-bs-theme="dark"] .border-top,
+[data-bs-theme="dark"] .border-bottom,
+[data-bs-theme="dark"] .border-start,
+[data-bs-theme="dark"] .border-end {
+    border-color: #334155 !important;
+}
+
+
+/* ==========================================================================
+   PRINT STYLES FOR BUKU ACARA
+   ========================================================================== */
+@media print {
+    #sidebar, #topbar, .no-print {
+        display: none !important;
+    }
+    #main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+    .card-custom {
+        background: #fff !important;
+        color: #000 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .table-dark-custom, .table {
+        color: #000 !important;
+    }
+    .table-dark-custom th, .table-dark-custom td,
+    .table th, .table td {
+        border-color: #333 !important;
+        color: #000 !important;
+        background: #fff !important;
+    }
+}
+
+/* Responsive Mobile */
+@media (max-width: 991.98px) {
+    #sidebar {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+    #sidebar.show {
+        margin-left: 0;
+    }
+    #main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
