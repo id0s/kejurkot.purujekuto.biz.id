@@ -126,8 +126,16 @@
 
                 <div class="d-flex align-items-center gap-2">
                     <?php if ($hasWinners): ?>
-                        <a href="<?= base_url('piagam/cetak-event/' . $ev['id'] . ($defaultTemplate ? '?template_id=' . $defaultTemplate['id'] : '')) ?>" target="_blank" class="btn btn-sm btn-primary-gradient d-inline-flex align-items-center gap-1 shadow-sm">
-                            <i class="bi bi-printer-fill"></i> Cetak Juara 1-3
+                        <?php 
+                        $isEvUsia567 = false;
+                        $evKuCheck = strtolower(($ev['kategori_usia'] ?? '') . ' ' . ($ev['nama_acara'] ?? ''));
+                        if (($ev['kelompok_umur_id'] ?? 0) == 1 || preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $evKuCheck)) {
+                            $isEvUsia567 = true;
+                        }
+                        $targetTplId = $isEvUsia567 ? 22 : (($defaultTemplate && $defaultTemplate['id'] != 22) ? (int)$defaultTemplate['id'] : 13);
+                        ?>
+                        <a href="<?= base_url('piagam/cetak-event/' . $ev['id'] . '?template_id=' . $targetTplId) ?>" target="_blank" class="btn btn-sm <?= $isEvUsia567 ? 'btn-warning text-dark fw-bold' : 'btn-primary-gradient' ?> d-inline-flex align-items-center gap-1 shadow-sm">
+                            <i class="bi bi-printer-fill"></i> Cetak Juara 1-3 <?= $isEvUsia567 ? '<span class="badge bg-dark text-warning ms-1">Usia Dini 567</span>' : '' ?>
                         </a>
                     <?php else: ?>
                         <a href="<?= base_url('hasil/input/' . $ev['id']) ?>" class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1">
@@ -213,7 +221,8 @@
                                                 data-prestasi="<?= esc(formatPrestasiPiagam($w['prestasi'], $ev['nama_acara'])) ?>"
                                                 data-kejuaraan="<?= esc($activeKejuaraan['nama'] ?? 'KEJURWIL ATLETIK KOTA PEKALONGAN 2026') ?>"
                                                 data-tempat="<?= esc($activeKejuaraan['tempat'] ?? 'Stadion Hoegeng Kota Pekalongan') ?>"
-                                                data-tanggal="29 Agustus 2026">
+                                                data-tanggal="29 Agustus 2026"
+                                                data-is-usia-567="<?= $isEvUsia567 ? '1' : '0' ?>">
                                                 <i class="bi bi-pencil-square"></i> Sesuaikan & Cetak
                                             </button>
                                         </td>
@@ -407,6 +416,17 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('custom_nama_kejuaraan').value = this.dataset.kejuaraan || '';
             document.getElementById('custom_tempat').value        = this.dataset.tempat || '';
             document.getElementById('custom_tanggal').value       = this.dataset.tanggal || '29 Agustus 2026';
+
+            // Pisahkan template otomatis: 22 untuk Usia Dini, 13 (atau default) untuk selain itu
+            const isUsia567 = (this.dataset.isUsia567 === '1');
+            const tplSelect = document.getElementById('custom_template_id');
+            if (tplSelect) {
+                if (isUsia567) {
+                    tplSelect.value = '22';
+                } else if (tplSelect.value == '22') {
+                    tplSelect.value = '13';
+                }
+            }
 
             modal.show();
         });

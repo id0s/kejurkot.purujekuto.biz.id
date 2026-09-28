@@ -1941,35 +1941,71 @@
 
     </style>
 
-    <!-- INJEKSI POSISI CUSTOM TERAKHIR DARI DATABASE (ANTI-HILANG SAAT REFRESH) -->
+    <!-- INJEKSI POSISI CUSTOM TERAKHIR DARI DATABASE (TERISOLASI: USIA DINI 567 vs SELAIN ITU) -->
     <?php 
     $savedOffsetsRaw = $template['custom_offsets'] ?? '';
-    $savedOffsets = !empty($savedOffsetsRaw) ? json_decode($savedOffsetsRaw, true) : [];
+    $allSavedOffsets = !empty($savedOffsetsRaw) ? json_decode($savedOffsetsRaw, true) : [];
+    $offsets567 = [];
+    $offsetsUmum = [];
+    if (is_array($allSavedOffsets)) {
+        if (isset($allSavedOffsets['usia_567']) || isset($allSavedOffsets['umum'])) {
+            $offsets567 = is_array($allSavedOffsets['usia_567'] ?? null) ? $allSavedOffsets['usia_567'] : [];
+            $offsetsUmum = is_array($allSavedOffsets['umum'] ?? null) ? $allSavedOffsets['umum'] : [];
+        } else {
+            // Jika data flat lama, simpan sebagai umum agar Usia Dini 5,6,7th tidak terdistorsi
+            $offsetsUmum = $allSavedOffsets;
+        }
+    }
     ?>
     <style id="server-custom-offsets-style">
-    <?php if (!empty($savedOffsets) && is_array($savedOffsets)): ?>
-        <?php foreach ($savedOffsets as $k => $coord): ?>
+    /* 1. OFFSETS KHUSUS KELOMPOK UMUR LAINNYA (SELAIN 5, 6, 7 TAHUN) */
+    <?php if (!empty($offsetsUmum) && is_array($offsetsUmum)): ?>
+        <?php foreach ($offsetsUmum as $k => $coord): ?>
             <?php 
             if (str_starts_with((string)$k, '__')) continue;
             $x = (int)($coord['x'] ?? 0);
             $y = (int)($coord['y'] ?? 0);
             if ($x !== 0 || $y !== 0):
             ?>
-                .piagam-sheet .cert-drag-item[data-drag-key="<?= esc($k) ?>"] {
+                .piagam-sheet:not(.is-usia-567) .cert-drag-item[data-drag-key="<?= esc($k) ?>"] {
                     transform: translate(<?= $x ?>px, <?= $y ?>px);
                 }
             <?php endif; ?>
         <?php endforeach; ?>
-        <?php if (!empty($savedOffsets['__hide_title'])): ?>
-            .overlay-title-box, .overlay-title-text { display: none !important; }
+        <?php if (!empty($offsetsUmum['__hide_title'])): ?>
+            .piagam-sheet:not(.is-usia-567) .overlay-title-box, .piagam-sheet:not(.is-usia-567) .overlay-title-text { display: none !important; }
         <?php endif; ?>
-        <?php if (!empty($savedOffsets['__hide_labels'])): ?>
-            .overlay-data-row .lbl,
-            .overlay-data-row .sep { display: none !important; }
-            .overlay-data-row .val { text-align: center !important; }
+        <?php if (!empty($offsetsUmum['__hide_labels'])): ?>
+            .piagam-sheet:not(.is-usia-567) .overlay-data-row .lbl,
+            .piagam-sheet:not(.is-usia-567) .overlay-data-row .sep { display: none !important; }
+            .piagam-sheet:not(.is-usia-567) .overlay-data-row .val { text-align: center !important; }
         <?php endif; ?>
-        <?php if (!empty($savedOffsets['__hide_ttd_center'])): ?>
-            .overlay-sig-col-center { display: none !important; }
+        <?php if (!empty($offsetsUmum['__hide_ttd_center'])): ?>
+            .piagam-sheet:not(.is-usia-567) .overlay-sig-col-center { display: none !important; }
+        <?php endif; ?>
+    <?php endif; ?>
+
+    /* 2. OFFSETS KHUSUS USIA DINI (5, 6, 7 TAHUN) - INDEPENDEN & TERISOLASI TOTAL */
+    <?php if (!empty($offsets567) && is_array($offsets567)): ?>
+        <?php foreach ($offsets567 as $k => $coord): ?>
+            <?php 
+            if (str_starts_with((string)$k, '__')) continue;
+            $x = (int)($coord['x'] ?? 0);
+            $y = (int)($coord['y'] ?? 0);
+            if ($x !== 0 || $y !== 0):
+            ?>
+                .piagam-sheet.is-usia-567 .cert-drag-item[data-drag-key="<?= esc($k) ?>"] {
+                    transform: translate(<?= $x ?>px, <?= $y ?>px);
+                }
+            <?php endif; ?>
+        <?php endforeach; ?>
+        <?php if (!empty($offsets567['__hide_title'])): ?>
+            .piagam-sheet.is-usia-567 .overlay-title-box, .piagam-sheet.is-usia-567 .overlay-title-text { display: none !important; }
+        <?php endif; ?>
+        <?php if (!empty($offsets567['__hide_labels'])): ?>
+            .piagam-sheet.is-usia-567 .overlay-data-row .lbl,
+            .piagam-sheet.is-usia-567 .overlay-data-row .sep { display: none !important; }
+            .piagam-sheet.is-usia-567 .overlay-data-row .val { text-align: center !important; }
         <?php endif; ?>
     <?php endif; ?>
     </style>
@@ -5856,29 +5892,40 @@ const serverSavedOffsets = <?= !empty($template['custom_offsets']) ? $template['
 
 function loadStoredOffsets() {
     try {
+        const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
+        let relevantSavedOffsets = {};
+        if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
+            if (serverSavedOffsets.usia_567 || serverSavedOffsets.umum) {
+                relevantSavedOffsets = isPageUsia567 ? (serverSavedOffsets.usia_567 || {}) : (serverSavedOffsets.umum || {});
+            } else {
+                relevantSavedOffsets = !isPageUsia567 ? serverSavedOffsets : {};
+            }
+        }
+
         // Prioritas 1: Ambil data posisi yang sudah tersimpan permanen di database
-        if (serverSavedOffsets && typeof serverSavedOffsets === 'object' && Object.keys(serverSavedOffsets).length > 0) {
-            customOffsets = Object.assign({}, serverSavedOffsets);
+        if (relevantSavedOffsets && typeof relevantSavedOffsets === 'object' && Object.keys(relevantSavedOffsets).length > 0) {
+            customOffsets = Object.assign({}, relevantSavedOffsets);
             applyAllCustomOffsets();
             
-            if (serverSavedOffsets.__hide_title === true || serverSavedOffsets.__hide_title === '1') {
+            if (relevantSavedOffsets.__hide_title === true || relevantSavedOffsets.__hide_title === '1') {
                 const el = document.getElementById('drag_hide_title');
                 if (el) el.checked = true;
                 toggleHideTitle(true);
             }
-            if (serverSavedOffsets.__hide_labels === true || serverSavedOffsets.__hide_labels === '1') {
+            if (relevantSavedOffsets.__hide_labels === true || relevantSavedOffsets.__hide_labels === '1') {
                 const el = document.getElementById('drag_hide_labels');
                 if (el) el.checked = true;
                 toggleHideLabels(true);
             }
-            if (serverSavedOffsets.__hide_ttd_center === true || serverSavedOffsets.__hide_ttd_center === '1') {
+            if (relevantSavedOffsets.__hide_ttd_center === true || relevantSavedOffsets.__hide_ttd_center === '1') {
                 const el = document.getElementById('drag_hide_ttd_center');
                 if (el) el.checked = true;
                 toggleHideTtdCenter(true);
             }
         } else {
             // Prioritas 2: Ambil dari localStorage browser jika ada
-            const raw = localStorage.getItem('piagam_offsets_tpl_' + currentTemplateId);
+            const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
+            const raw = localStorage.getItem(storageKey);
             if (raw) {
                 customOffsets = JSON.parse(raw);
                 applyAllCustomOffsets();
@@ -5988,11 +6035,13 @@ function selectDragElement(key) {
 }
 
 function applyAllCustomOffsets() {
+    const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
+    const targetSelector = isPageUsia567 ? '.piagam-sheet.is-usia-567' : '.piagam-sheet:not(.is-usia-567)';
     for (const [key, offset] of Object.entries(customOffsets)) {
         if (!offset || key.startsWith('__')) continue;
         const x = offset.x || 0;
         const y = offset.y || 0;
-        document.querySelectorAll(`.cert-drag-item[data-drag-key="${key}"]`).forEach(el => {
+        document.querySelectorAll(`${targetSelector} .cert-drag-item[data-drag-key="${key}"]`).forEach(el => {
             el.style.setProperty('transform', `translate(${x}px, ${y}px)`, 'important');
         });
     }
@@ -6192,18 +6241,39 @@ function saveCustomDragOffsets() {
     customOffsets['__hide_labels'] = document.getElementById('drag_hide_labels')?.checked ? '1' : '0';
     customOffsets['__hide_ttd_center'] = document.getElementById('drag_hide_ttd_center')?.checked ? '1' : '0';
 
+    const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
+    const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
+
     // 1. Simpan ke localStorage browser
     try {
-        localStorage.setItem('piagam_offsets_tpl_' + currentTemplateId, JSON.stringify(customOffsets));
+        localStorage.setItem(storageKey, JSON.stringify(customOffsets));
         localStorage.setItem('piagam_hide_title_' + currentTemplateId, customOffsets['__hide_title']);
         localStorage.setItem('piagam_hide_labels_' + currentTemplateId, customOffsets['__hide_labels']);
         localStorage.setItem('piagam_hide_ttd_center_' + currentTemplateId, customOffsets['__hide_ttd_center']);
     } catch(e) {}
 
-    // 2. Simpan PERMANEN ke Database via AJAX
+    // 2. Susun objek offsets terisolasi (usia_567 vs umum)
+    let fullOffsets = {};
+    if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
+        if (serverSavedOffsets.usia_567 || serverSavedOffsets.umum) {
+            fullOffsets = Object.assign({}, serverSavedOffsets);
+        } else {
+            fullOffsets = { umum: Object.assign({}, serverSavedOffsets), usia_567: {} };
+        }
+    }
+    if (!fullOffsets.umum) fullOffsets.umum = {};
+    if (!fullOffsets.usia_567) fullOffsets.usia_567 = {};
+
+    if (isPageUsia567) {
+        fullOffsets.usia_567 = customOffsets;
+    } else {
+        fullOffsets.umum = customOffsets;
+    }
+
+    // Simpan PERMANEN ke Database via AJAX
     const payload = new FormData();
     payload.append('template_id', currentTemplateId);
-    payload.append('custom_offsets', JSON.stringify(customOffsets));
+    payload.append('custom_offsets', JSON.stringify(fullOffsets));
 
     fetch('<?= base_url('piagam/update-template-position') ?>', {
         method: 'POST',
@@ -6236,16 +6306,20 @@ function saveCustomDragOffsets() {
 
 function resetCustomDragOffsets() {
     if (!confirm('Kembalikan seluruh posisi elemen (Nama, Juara, TTD, dll) ke posisi default awal?')) return;
+    const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
+    const targetSheets = isPageUsia567 ? '.piagam-sheet.is-usia-567' : '.piagam-sheet:not(.is-usia-567)';
+    const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
+
     customOffsets = {};
     try {
-        localStorage.removeItem('piagam_offsets_tpl_' + currentTemplateId);
+        localStorage.removeItem(storageKey);
         localStorage.removeItem('piagam_hide_title_' + currentTemplateId);
         localStorage.removeItem('piagam_hide_labels_' + currentTemplateId);
         localStorage.removeItem('piagam_hide_ttd_center_' + currentTemplateId);
     } catch(e) {}
     
-    // Hapus inline transform dan style server jika ada
-    document.querySelectorAll('.cert-drag-item').forEach(el => {
+    // Hapus inline transform hanya pada target sheet kategori ini
+    document.querySelectorAll(`${targetSheets} .cert-drag-item`).forEach(el => {
         el.style.removeProperty('transform');
         el.style.transform = '';
     });
@@ -6262,10 +6336,24 @@ function resetCustomDragOffsets() {
     const chk3 = document.getElementById('drag_hide_ttd_center');
     if (chk3) chk3.checked = false;
 
-    // Reset juga di database via AJAX
+    // Reset hanya namespace kategori ini di database
+    let fullOffsets = {};
+    if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
+        if (serverSavedOffsets.usia_567 || serverSavedOffsets.umum) {
+            fullOffsets = Object.assign({}, serverSavedOffsets);
+        } else {
+            fullOffsets = { umum: Object.assign({}, serverSavedOffsets), usia_567: {} };
+        }
+    }
+    if (isPageUsia567) {
+        fullOffsets.usia_567 = {};
+    } else {
+        fullOffsets.umum = {};
+    }
+
     const payload = new FormData();
     payload.append('template_id', currentTemplateId);
-    payload.append('custom_offsets', '');
+    payload.append('custom_offsets', JSON.stringify(fullOffsets));
     fetch('<?= base_url('piagam/update-template-position') ?>', {
         method: 'POST',
         body: payload

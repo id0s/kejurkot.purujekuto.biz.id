@@ -149,10 +149,21 @@ class Piagam extends BaseController
         }
         $eventId = (int)$event['id'];
 
+        $evKuCheck = strtolower(($event['kategori_usia'] ?? '') . ' ' . ($event['nama_acara'] ?? ''));
+        $isEvUsia567 = (($event['kelompok_umur_id'] ?? 0) == 1 || preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $evKuCheck));
+
         $templateId = (int)($this->request->getGet('template_id') ?? 0);
-        $template = $templateId ? $this->templateModel->find($templateId) : $this->templateModel->getDefaultTemplate();
+        if ($templateId <= 0) {
+            if ($isEvUsia567) {
+                $templateId = 22; // Template Khusus Usia Dini (5, 6, 7 Tahun)
+            } else {
+                $def = $this->templateModel->getDefaultTemplate();
+                $templateId = ($def && $def['id'] != 22) ? (int)$def['id'] : 13;
+            }
+        }
+        $template = $this->templateModel->find($templateId);
         if (!$template) {
-            $template = $this->templateModel->first();
+            $template = $this->templateModel->getDefaultTemplate() ?: $this->templateModel->first();
         }
 
         $winners = $this->getWinnersByEvent($eventId);
