@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title ?? 'Cetak Piagam Penghargaan') ?></title>
 
+    <link rel="icon" type="image/png" href="<?= base_url('assets/images/pasi-logo.png') ?>">
+
     <!-- Google Fonts untuk Tipografi Sertifikat Bergengsi & Canva Style -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +22,16 @@
             box-sizing: border-box;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+        }
+
+        /* Sembunyikan CodeIgniter Debug Toolbar & Icon CI */
+        #toolbarContainer,
+        #debug-icon,
+        #debug-bar,
+        .ci-debug-toolbar {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
         }
 
         body {
@@ -38,7 +50,7 @@
 
         @page {
             size: A4 <?= $isLandscape ? 'landscape' : 'portrait' ?>;
-            margin: 0;
+            margin: 0mm !important;
         }
 
         /* Container lembar halaman piagam */
@@ -76,12 +88,26 @@
         }
 
         @media print {
-            body {
+            @page {
+                size: A4 <?= $isLandscape ? 'landscape' : 'portrait' ?>;
+                margin: 0mm !important;
+            }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
                 background: none !important;
             }
             .print-toolbar,
-            .adjuster-floating-panel {
+            .adjuster-floating-panel,
+            .drag-floating-bar,
+            .mm-grid-overlay,
+            #toolbarContainer,
+            #debug-icon,
+            #debug-bar,
+            .ci-debug-toolbar {
                 display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
             }
             .piagam-sheet {
                 margin: 0 !important;
@@ -499,7 +525,32 @@
             from { opacity: 0; transform: translate(-50%, 15px); }
             to { opacity: 1; transform: translate(-50%, 0); }
         }
+        /* Inline Direct Editing Teks Piagam Langsung */
+        .cert-editable-field {
+            cursor: text;
+            transition: background-color 0.15s ease, outline 0.15s ease, box-shadow 0.15s ease;
+            border-radius: 4px;
+            padding: 1px 4px;
+            display: inline-block;
+        }
+        .cert-editable-field:hover {
+            outline: 1.5px dashed #0284C7;
+            background-color: rgba(2, 132, 199, 0.08);
+        }
+        .cert-editable-field:focus {
+            outline: 2px solid #0284C7 !important;
+            background-color: rgba(2, 132, 199, 0.16) !important;
+            box-shadow: 0 0 8px rgba(2, 132, 199, 0.35) !important;
+        }
+
         @media print {
+            .cert-editable-field {
+                outline: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
             body.drag-mode-active .cert-drag-item {
                 outline: none !important;
                 background-color: transparent !important;
@@ -508,7 +559,7 @@
             body.drag-mode-active .cert-drag-item::before {
                 display: none !important;
             }
-            #dragModeToolbar, #adjusterPanel, .drag-floating-bar, .mm-grid-overlay {
+            #dragModeToolbar, #adjusterPanel, #editDataPanel, .drag-floating-bar, .mm-grid-overlay {
                 display: none !important;
             }
         }
@@ -858,11 +909,11 @@
         .portrait-data-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0 14px 0;
+            margin: 12px 0 16px 0;
         }
 
         .portrait-data-table td {
-            padding: 5px 2px;
+            padding: 7px 2px;
             vertical-align: middle;
         }
 
@@ -1961,6 +2012,12 @@
         <span id="dragBtnLabel">Mode Geser Elemen</span>
     </button>
 
+    <!-- Tombol Edit Data Peserta Live -->
+    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm" id="btnToggleEditData" onclick="toggleEditDataPanel()" title="Ubah Nama Atlet, Sekolah, Juara, dan data lainnya secara realtime">
+        <i class="bi bi-pencil-square text-dark"></i>
+        <span>Edit Nama & Data</span>
+    </button>
+
     <!-- Tombol Atur Grid & Letak TTD Live -->
     <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm" id="btnToggleAdjuster" onclick="toggleAdjusterPanel()">
         <i class="bi bi-sliders text-info"></i>
@@ -2149,13 +2206,145 @@
     </div>
 </div>
 
+<!-- Floating Panel Edit Data Peserta / Atlet (Live Sync) -->
+<?php $firstItem = $piagamList[0] ?? []; ?>
+<div id="editDataPanel" class="adjuster-floating-panel" style="display: none; width: 720px; max-width: 96vw; background: rgba(15, 23, 42, 0.98); border: 2px solid #F59E0B; box-shadow: 0 20px 45px rgba(0,0,0,0.7); border-radius: 14px;">
+    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary">
+        <div class="fw-bold text-warning d-flex align-items-center gap-2 fs-6">
+            <i class="bi bi-pencil-square fs-5"></i>
+            <span>Edit Nama & Data Peserta (Real-time Live Sync)</span>
+        </div>
+        <button type="button" class="btn-close btn-close-white" onclick="toggleEditDataPanel()"></button>
+    </div>
+
+    <div class="row g-2 text-start">
+        <!-- 1. Nama Lengkap Peserta -->
+        <div class="col-md-8">
+            <label class="form-label text-warning small fw-bold mb-1">
+                <i class="bi bi-person-fill me-1"></i> Nama Lengkap Atlet / Peserta:
+            </label>
+            <input type="text" id="edit_nama_pemenang" class="form-control form-control-sm bg-dark text-white border-warning fw-bold fs-6" 
+                value="<?= esc($firstItem['nama_pemenang'] ?? 'NAMA PESERTA') ?>" 
+                placeholder="Ketik nama lengkap peserta..." 
+                oninput="updateLiveField('nama', this.value)">
+            <span class="text-white-50" style="font-size: 11px;">*Teks nama di sertifikat langsung berubah otomatis saat Anda mengetik.</span>
+        </div>
+
+        <!-- 2. Peringkat / Juara -->
+        <div class="col-md-4">
+            <label class="form-label text-white-50 small fw-bold mb-1">
+                <i class="bi bi-trophy-fill text-warning me-1"></i> Sebagai Juara:
+            </label>
+            <select id="edit_peringkat" class="form-select form-select-sm bg-dark text-white border-secondary fw-bold" onchange="updateLiveJuara(this.value)">
+                <?php $currentP = (int)($firstItem['peringkat'] ?? 1); ?>
+                <option value="1" <?= $currentP === 1 ? 'selected' : '' ?>>Juara 1 (Satu) - Emas</option>
+                <option value="2" <?= $currentP === 2 ? 'selected' : '' ?>>Juara 2 (Dua) - Perak</option>
+                <option value="3" <?= $currentP === 3 ? 'selected' : '' ?>>Juara 3 (Tiga) - Perunggu</option>
+                <option value="4" <?= $currentP === 4 ? 'selected' : '' ?>>Juara Harapan 1</option>
+                <option value="5" <?= $currentP === 5 ? 'selected' : '' ?>>Juara Harapan 2</option>
+            </select>
+        </div>
+
+        <input type="hidden" id="edit_asal_sekolah" value="<?= esc($firstItem['asal_sekolah'] ?: ($firstItem['asal_kota'] ?? '')) ?>">
+        <input type="hidden" id="edit_asal_kota" value="">
+
+        <!-- 5. Nomor & Kategori Lomba -->
+        <div class="col-md-8">
+            <label class="form-label text-white-50 small fw-bold mb-1">
+                <i class="bi bi-flag-fill me-1"></i> Nomor & Kategori Lomba:
+            </label>
+            <input type="text" id="edit_nomor_lomba" class="form-control form-control-sm bg-dark text-white border-secondary" 
+                value="<?= esc($firstItem['nomor_lomba'] ?? 'Lari 100 M KU 16-18 Putra') ?>" 
+                placeholder="Contoh: Lari 100 M KU 16-18 Putra" 
+                oninput="updateLiveField('lomba', this.value)">
+        </div>
+
+        <!-- 6. Catatan Prestasi -->
+        <div class="col-md-4">
+            <label class="form-label text-white-50 small fw-bold mb-1">
+                <i class="bi bi-stopwatch me-1"></i> Catatan Prestasi:
+            </label>
+            <input type="text" id="edit_prestasi" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" 
+                value="<?= esc($firstItem['prestasi'] ?? '-') ?>" 
+                placeholder="Contoh: 11.24 dtk" 
+                oninput="updateLiveField('prestasi', this.value)">
+        </div>
+
+        <!-- 7. Nomor Piagam -->
+        <div class="col-md-12">
+            <label class="form-label text-white-50 small fw-bold mb-1">
+                <i class="bi bi-hash me-1"></i> Nomor Surat / Piagam:
+            </label>
+            <input type="text" id="edit_nomor_piagam" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" 
+                value="<?= esc($firstItem['nomor_piagam'] ?? '') ?>" 
+                placeholder="001/SERT/PASIJATENG/IX/2026" 
+                oninput="updateLiveField('nomor', this.value)">
+        </div>
+    </div>
+
+        <!-- Format Tanda Tangan: Triple vs Single Usia 5, 6, 7 th -->
+        <div class="col-md-12 mt-2 pt-2 border-top border-secondary">
+            <label class="form-label text-warning small fw-bold mb-1">
+                <i class="bi bi-pen-fill me-1"></i> Format Tanda Tangan Pejabat:
+            </label>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="live_ttd_mode" id="live_ttd_auto" value="auto" checked onchange="updateLiveTtdFormat(this.value)">
+                    <label class="form-check-label small text-white" for="live_ttd_auto">
+                        ⚡ <strong>Otomatis</strong> (Usia 5,6,7 th = Hanya Ketua PASI Pekalongan, Lainnya = Triple)
+                    </label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="live_ttd_mode" id="live_ttd_single" value="single_pekalongan" onchange="updateLiveTtdFormat(this.value)">
+                    <label class="form-check-label small text-warning fw-bold" for="live_ttd_single">
+                        👤 <strong>Hanya Ketua PASI Kota Pekalongan</strong> (Usia 5, 6, 7 th)
+                    </label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="live_ttd_mode" id="live_ttd_triple" value="triple" onchange="updateLiveTtdFormat(this.value)">
+                    <label class="form-check-label small text-white" for="live_ttd_triple">
+                        👥 <strong>Triple Signatures</strong> (Korwil + Panitia + PASI Jateng)
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between mt-3 pt-2 border-top border-secondary">
+        <div class="small text-white-50">
+            <i class="bi bi-lightbulb-fill text-warning me-1"></i>
+            <strong>Tips:</strong> Anda juga bisa langsung <u>klik teks di lembar piagam</u> untuk mengetik langsung (WYSIWYG)!
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3" onclick="saveDataToUrl()" title="Simpan data peserta ini ke URL browser">
+                <i class="bi bi-link-45deg me-1"></i> Simpan URL
+            </button>
+            <button type="button" class="btn btn-sm btn-success fw-bold rounded-pill px-4" onclick="toggleEditDataPanel()">
+                <i class="bi bi-check-lg me-1"></i> Selesai
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Loop Lembar Piagam Penghargaan -->
 <?php foreach ($piagamList as $idx => $item): ?>
     <?php 
     // Bersihkan nomor dari kemungkinan awalan "NO :" berulang
     $cleanNomor = trim(preg_replace('/^(NO|NOMOR)\s*:\s*/i', '', $item['nomor_piagam']));
+
+    // Deteksi apakah nomor acara / kategori ini adalah Usia Dini 5, 6, 7 tahun (U 5, U 6, U 7 / KU 5-6 / JuarAKU)
+    // Sesuai aturan: Untuk Usia 5, 6, 7 th tanda tangan HANYA Ketua PASI Kota Pekalongan saja
+    $isUsia567 = false;
+    $kuCheckStr = strtolower(($item['kategori_usia'] ?? '') . ' ' . ($item['nomor_lomba'] ?? ''));
+    if (preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $kuCheckStr)) {
+        $isUsia567 = true;
+    }
+    if (isset($item['hanya_ketua_pekalongan'])) {
+        $isUsia567 = (bool)$item['hanya_ketua_pekalongan'];
+    }
+    $jabatanKetuaPekalongan = "Pengurus Kota PASI Pekalongan\nKetua Umum";
     ?>
-    <div class="piagam-sheet" id="sheet-<?= $idx ?>">
+    <div class="piagam-sheet" id="sheet-<?= $idx ?>" data-is-usia-567="<?= $isUsia567 ? '1' : '0' ?>">
         <?php 
         $orientasi = $template['orientasi'] ?? 'landscape';
         $tipe      = $template['tipe'] ?? 'overlay';
@@ -2243,29 +2432,26 @@
                 
                 <!-- ZONA 1: NOMOR PIAGAM (Tepat di bawah SERTIFIKAT PENGHARGAAN, di atas garis ornamen emas) -->
                 <div class="canva-zone-nomor cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">
-                    NOMOR : <?= esc($cleanNomor) ?>
+                    NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
                 </div>
 
                 <!-- ZONA 2: NAMA ATLET & KONTINGEN (Di ruang lapang antara "Dengan Bangga Diberikan Kepada" dan "Telah Meraih") -->
                 <div class="canva-zone-athlete cert-drag-item" data-drag-key="nama" data-drag-name="Nama Atlet & Asal">
-                    <div class="canva-athlete-name" style="font-size: <?= (int)($template['font_size_nama'] ?: 27) ?>px;">
+                    <div class="canva-athlete-name cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama atlet/peserta" style="font-size: <?= (int)($template['font_size_nama'] ?: 27) ?>px;">
                         <?= esc($item['nama_pemenang']) ?>
-                    </div>
-                    <div class="canva-athlete-origin">
-                        Kontingen : <strong><?= esc($item['asal_kota']) ?><?= (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen') ? ' - ' . esc($item['asal_sekolah']) : '' ?></strong>
                     </div>
                 </div>
 
                 <!-- ZONA 3: JUARA (TEPAT DI DALAM PITA EMAS CANVA / DISEIMBANGKAN SEMPURNA) -->
                 <div class="canva-zone-ribbon cert-drag-item" data-drag-key="juara" data-drag-name="Gelar Juara">
-                    ★ JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) ★
+                    <span class="cert-live-juara-ribbon cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit gelar juara">★ JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) ★</span>
                 </div>
 
                 <!-- ZONA 4: NOMOR LOMBA & PRESTASI (Tepat di bawah pita emas) -->
                 <div class="canva-zone-event cert-drag-item" data-drag-key="lomba" data-drag-name="Nomor Lomba">
-                    <span><?= esc($item['nomor_lomba']) ?></span>
+                    <span class="cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit lomba"><?= esc($item['nomor_lomba']) ?></span>
                     <?php if (!empty($item['prestasi']) && $item['prestasi'] !== '-'): ?>
-                        <span class="ms-1">&bull; Prestasi: <strong><?= esc($item['prestasi']) ?></strong></span>
+                        <span class="ms-1">&bull; Prestasi: <strong class="cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit prestasi"><?= esc($item['prestasi']) ?></strong></span>
                     <?php endif; ?>
                 </div>
 
@@ -2295,7 +2481,7 @@
 
                     <div class="overlay-title-box">
                         <div class="overlay-title-text cert-drag-item" data-drag-key="judul" data-drag-name="Judul Piagam"><?= esc($template['judul'] ?: 'PIAGAM PENGHARGAAN') ?></div>
-                        <div class="overlay-nomor-line cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">NOMOR : <?= esc($cleanNomor) ?></div>
+                        <div class="overlay-nomor-line cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span></div>
                     </div>
 
                     <?php if (!empty(trim($template['kalimat_pembuka'] ?? ''))): ?>
@@ -2308,27 +2494,22 @@
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_nama" data-drag-name="Nama Atlet">
                             <span class="lbl">Nama</span>
                             <span class="sep">:</span>
-                            <span class="val val-nama" style="font-size: <?= (int)($template['font_size_nama'] ?: 16.5) ?>px;"><?= esc($item['nama_pemenang']) ?></span>
-                        </div>
-                        <div class="overlay-data-row cert-drag-item" data-drag-key="row_asal" data-drag-name="Asal Kota / Sekolah">
-                            <span class="lbl">Asal Kabupaten/Kota</span>
-                            <span class="sep">:</span>
-                            <span class="val"><?= esc($item['asal_kota']) ?><?= (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen') ? ' (' . esc($item['asal_sekolah']) . ')' : '' ?></span>
+                            <span class="val val-nama cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama peserta" style="font-size: <?= (int)($template['font_size_nama'] ?: 16.5) ?>px;"><?= esc($item['nama_pemenang']) ?></span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_lomba" data-drag-name="Nomor Lomba">
                             <span class="lbl">Nomor Lomba</span>
                             <span class="sep">:</span>
-                            <span class="val"><?= esc($item['nomor_lomba']) ?></span>
+                            <span class="val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($item['nomor_lomba']) ?></span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_juara" data-drag-name="Sebagai Juara">
                             <span class="lbl">Sebagai Juara</span>
                             <span class="sep">:</span>
-                            <span class="val"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</span>
+                            <span class="val cert-live-juara cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit juara"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_prestasi" data-drag-name="Prestasi">
                             <span class="lbl">Prestasi</span>
                             <span class="sep">:</span>
-                            <span class="val"><?= esc($item['prestasi'] ?: '-') ?></span>
+                            <span class="val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($item['prestasi'] ?: '-') ?></span>
                         </div>
                     </div>
 
@@ -2342,7 +2523,19 @@
 
             <!-- Baris Tanda Tangan Resmi (Jika Portrait Menggunakan Format Segitiga Gambar 2, Jika Landscape 3 Kolom) -->
             <?php if ($orientasi === 'portrait'): ?>
-                <div class="portrait-signatures-triple" style="position: absolute; bottom: <?= 10 + (int)($template['offset_ttd'] ?? 0) ?>%; left: 50%; transform: translateX(-50%); width: 88%; z-index: 25;">
+                <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                <div class="portrait-official-signature-center sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> position: absolute; bottom: <?= 12 + (int)($template['offset_ttd'] ?? 0) ?>%; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; z-index: 25;">
+                    <div class="sig-unit-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                    <div class="sig-unit-img-box">
+                        <?php if ($url2): ?>
+                            <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="sig-unit-img">
+                        <?php endif; ?>
+                    </div>
+                    <div class="sig-unit-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                </div>
+
+                <!-- Triple Signatures (Korwil Kiri, Panitia Kanan, PASI Jateng Tengah Bawah) -->
+                <div class="portrait-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? 'display:block;' : 'display:none;' ?> position: absolute; bottom: <?= 10 + (int)($template['offset_ttd'] ?? 0) ?>%; left: 50%; transform: translateX(-50%); width: 88%; z-index: 25;">
                     <div class="sig-top-pair">
                         <!-- TTD 1: Koordinator Wilayah (Kiri Atas) -->
                         <div class="sig-unit cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
@@ -2379,7 +2572,18 @@
                     </div>
                 </div>
             <?php else: ?>
-                <div class="overlay-signatures-triple">
+                <!-- Single Signature Usia 5, 6, 7 th (Landscape): HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> position: absolute; bottom: <?= 12 + (int)($template['offset_ttd'] ?? 0) ?>mm; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; z-index: 25;">
+                    <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                    <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                        <?php if ($url2): ?>
+                            <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                        <?php endif; ?>
+                    </div>
+                    <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                </div>
+
+                <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? 'display:flex;' : 'display:none;' ?>">
                     <!-- TTD 1: Koordinator Wilayah -->
                     <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                         <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -2465,9 +2669,7 @@
                             <?= esc($item['nama_pemenang']) ?>
                         </div>
 
-                        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
-                            <?= esc($item['asal_sekolah'] ?: $item['asal_kota']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                        </div>
+
 
                         <div class="d-inline-flex align-items-center gap-2 px-4 py-1 rounded-pill mb-2" style="background: linear-gradient(135deg, #004B87 0%, #00ADB5 100%); color: #FFF; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(0,75,135,0.25);">
                             <i class="bi bi-trophy-fill text-warning"></i> JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) &bull; <?= esc($item['nomor_lomba']) ?>
@@ -2482,7 +2684,17 @@
                     <!-- Signatures Resmi -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -2558,9 +2770,7 @@ PLT PASI Jateng")) ?></div>
                                 <?= esc($item['nama_pemenang']) ?>
                             </div>
 
-                            <div style="font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #78350F; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">
-                                <?= esc($item['asal_sekolah'] ?: $item['asal_kota']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
+
 
                             <div class="d-inline-flex align-items-center gap-2 px-4 py-1 rounded" style="background: #FEF3C7; border: 1.5px solid #D97706; color: #92400E; font-family: 'Cinzel', serif; font-weight: 900; font-size: 14.5px; letter-spacing: 1px;">
                                 <i class="bi bi-star-fill text-warning"></i> JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) &bull; <?= esc($item['nomor_lomba']) ?>
@@ -2575,7 +2785,17 @@ PLT PASI Jateng")) ?></div>
                         <!-- Signatures Resmi -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -2651,9 +2871,7 @@ PLT PASI Jateng")) ?></div>
                             <?= esc($item['nama_pemenang']) ?>
                         </div>
 
-                        <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #A8201A; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
-                            <?= esc($item['asal_sekolah'] ?: $item['asal_kota']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                        </div>
+
 
                         <div class="d-inline-flex align-items-center gap-2 px-4 py-1 rounded-pill mb-2" style="background: #A8201A; color: #FFF; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 1px;">
                             <i class="bi bi-award-fill text-warning"></i> JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) &bull; <?= esc($item['nomor_lomba']) ?>
@@ -2668,7 +2886,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures Resmi -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -2743,9 +2971,7 @@ PLT PASI Jateng")) ?></div>
                             <?= esc($item['nama_pemenang']) ?>
                         </div>
 
-                        <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #374151; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
-                            <?= esc($item['asal_sekolah'] ?: $item['asal_kota']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                        </div>
+
 
                         <div class="d-inline-flex align-items-center gap-2 px-4 py-1 rounded mb-2" style="background: #FFFBEB; border: 1.5px solid #F59E0B; color: #B45309; font-family: 'Cinzel', serif; font-weight: 800; font-size: 14px;">
                             <i class="bi bi-trophy-fill text-warning"></i> JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) &bull; <?= esc($item['nomor_lomba']) ?>
@@ -2760,7 +2986,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures Resmi -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -2833,9 +3069,7 @@ PLT PASI Jateng")) ?></div>
                             <?= esc($item['nama_pemenang']) ?>
                         </div>
 
-                        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
-                            <?= esc($item['asal_sekolah'] ?: $item['asal_kota']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                        </div>
+
 
                         <div class="d-inline-flex align-items-center gap-2 px-4 py-2 border border-2 border-dark rounded mb-2" style="background: #F8FAFC; color: #0F172A; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 15px;">
                             <i class="bi bi-trophy-fill text-warning"></i> JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) &bull; <?= esc($item['nomor_lomba']) ?>
@@ -2849,7 +3083,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -2925,9 +3169,7 @@ PLT PASI Jateng")) ?></div>
                             <?= esc($item['nama_pemenang']) ?>
                         </div>
                         
-                        <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #374151; letter-spacing: 0.5px; margin-bottom: 12px; text-transform: uppercase;">
-                            <?= esc($item['asal_sekolah'] ?: $item['asal_kota']) ?>
-                        </div>
+
 
                         <div class="d-inline-block px-3 py-1 mb-2 rounded" style="background: #FEF3C7; border: 1px solid #F59E0B; color: #92400E; font-weight: 800; font-size: 14px;">
                             <i class="bi bi-trophy-fill text-warning me-1"></i> JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) &bull; <?= esc($item['nomor_lomba']) ?>
@@ -2941,7 +3183,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -3061,32 +3313,27 @@ PLT PASI Jateng")) ?></div>
                         <?= esc($template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :') ?>
                     </p>
 
-                    <!-- Tabel 5 Data Atlet (Sesuai Scan Resmi) -->
+                    <!-- Tabel 4 Data Atlet (Nama, Lomba, Juara, Prestasi) -->
                     <table class="portrait-data-table">
                         <tr class="cert-drag-item" data-drag-key="row_nama" data-drag-name="Nama Atlet">
                             <td class="td-label">Nama</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val val-nama"><?= esc($item['nama_pemenang']) ?></td>
-                        </tr>
-                        <tr class="cert-drag-item" data-drag-key="row_asal" data-drag-name="Asal Kota / Sekolah">
-                            <td class="td-label">Asal Kabupaten/Kota</td>
-                            <td class="td-sep">:</td>
-                            <td class="td-val"><?= esc($item['asal_kota']) ?><?= (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen') ? ' (' . esc($item['asal_sekolah']) . ')' : '' ?></td>
+                            <td class="td-val val-nama cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama"><?= esc($item['nama_pemenang']) ?></td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_lomba" data-drag-name="Nomor Lomba">
                             <td class="td-label">Nomor Lomba</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val"><?= esc($item['nomor_lomba']) ?></td>
+                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($item['nomor_lomba']) ?></td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_juara" data-drag-name="Sebagai Juara">
                             <td class="td-label">Sebagai Juara</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</td>
+                            <td class="td-val cert-live-juara cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit juara"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_prestasi" data-drag-name="Prestasi">
                             <td class="td-label">Prestasi</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val"><?= esc($item['prestasi'] ?: '-') ?></td>
+                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($item['prestasi'] ?: '-') ?></td>
                         </tr>
                     </table>
 
@@ -3162,53 +3409,50 @@ PLT PASI Jateng")) ?></div>
                 }
                 ?>
 
-                <?php if (!$showTripleSig): ?>
-                    <!-- Single Center Signature Dr. Agus Widodo Suripto, MPd + Stempel PASI Jateng -->
-                    <div class="portrait-official-signature-center cert-drag-item" data-drag-key="ttd" data-drag-name="TTD Resmi PASI Jateng">
+                                <!-- 1. Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                <div class="portrait-official-signature-center sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?>">
+                    <div class="sig-unit-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                    <div class="sig-unit-img-box">
+                        <?php if ($url2): ?>
+                            <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="sig-unit-img">
+                        <?php endif; ?>
+                    </div>
+                    <div class="sig-unit-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                </div>
+
+                <!-- 2. Triple Signatures (Korwil Kiri, Panitia Kanan, PASI Jateng Tengah Bawah) untuk KU 10-18 -->
+                <div class="portrait-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? 'display:block;' : 'display:none;' ?>">
+                    <div class="sig-top-pair">
+                        <div class="sig-unit cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
+                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
+                            <div class="sig-unit-img-box">
+                                <?php if ($url1): ?>
+                                    <img src="<?= $url1 ?>" alt="TTD 1 & Stempel PASI Pekalongan" class="sig-unit-img">
+                                <?php endif; ?>
+                            </div>
+                            <div class="sig-unit-name"><?= esc($template['ttd_1_nama'] ?: 'Jumanto, S.Pd., M.Si.') ?></div>
+                        </div>
+
+                        <div class="sig-unit cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="sig-unit-img-box">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="sig-unit-img">
+                                <?php endif; ?>
+                            </div>
+                            <div class="sig-unit-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                    </div>
+
+                    <div class="sig-unit sig-unit-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                         <div class="sig-unit-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,\nPengurus Provinsi PASI Jawa Tengah\nPlt. Ketua Umum")) ?></div>
                         <div class="sig-unit-img-box">
                             <?php if ($url3): ?>
-                                <img src="<?= $url3 ?>" alt="TTD & Stempel Resmi PASI Jateng" class="sig-unit-img">
+                                <img src="<?= $url3 ?>" alt="TTD 3 & Stempel" class="sig-unit-img">
                             <?php endif; ?>
                         </div>
-                        <div class="sig-unit-name"><?= esc($template['ttd_3_nama'] ?: 'Dr. Agus Widodo Suripto, M. Pd.') ?></div>
                     </div>
-                <?php else: ?>
-                    <!-- Triple Signatures (Korwil Kiri, Panitia Kanan, PASI Jateng Tengah Bawah) -->
-                    <div class="portrait-signatures-triple">
-                        <div class="sig-top-pair">
-                            <div class="sig-unit cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
-                                <div class="sig-unit-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
-                                <div class="sig-unit-img-box">
-                                    <?php if ($url1): ?>
-                                        <img src="<?= $url1 ?>" alt="TTD 1 & Stempel PASI Pekalongan" class="sig-unit-img">
-                                    <?php endif; ?>
-                                </div>
-                                <div class="sig-unit-name"><?= esc($template['ttd_1_nama'] ?: 'Jumanto, S.Pd., M.Si.') ?></div>
-                            </div>
-
-                            <div class="sig-unit cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
-                                <div class="sig-unit-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
-                                <div class="sig-unit-img-box">
-                                    <?php if ($url2): ?>
-                                        <img src="<?= $url2 ?>" alt="TTD 2" class="sig-unit-img">
-                                    <?php endif; ?>
-                                </div>
-                                <div class="sig-unit-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
-                            </div>
-                        </div>
-
-                        <div class="sig-unit sig-unit-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
-                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,\nPengurus Provinsi PASI Jawa Tengah\nPlt. Ketua Umum")) ?></div>
-                            <div class="sig-unit-img-box">
-                                <?php if ($url3): ?>
-                                    <img src="<?= $url3 ?>" alt="TTD 3 & Stempel" class="sig-unit-img">
-                                <?php endif; ?>
-                            </div>
-                            <div class="sig-unit-name"><?= esc($template['ttd_3_nama'] ?: 'Dr. Agus Widodo Suripto, M. Pd.') ?></div>
-                        </div>
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
         </div>
 
@@ -3333,28 +3577,23 @@ PLT PASI Jateng")) ?></div>
                         <?= esc($template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :') ?>
                     </p>
 
-                    <!-- Tabel 5 Data Atlet (Sesuai Scan Resmi) -->
+                    <!-- Tabel 4 Data Atlet (Nama, Lomba, Juara, Prestasi) -->
                     <table class="portrait-data-table">
                         <tr>
                             <td class="td-label">Nama</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val val-nama" style="font-family: 'Cinzel', 'Montserrat', serif; font-size: <?= (int)($template['font_size_nama'] ?: 18) ?>px; font-weight: 900; color: #071E3D !important; letter-spacing: 1px;"><?= esc($item['nama_pemenang']) ?></td>
-                        </tr>
-                        <tr>
-                            <td class="td-label">Asal Kabupaten/Kota</td>
-                            <td class="td-sep">:</td>
-                            <td class="td-val" style="font-weight: 700; color: #111827;"><?= esc($item['asal_kota']) ?><?= (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen') ? ' (' . esc($item['asal_sekolah']) . ')' : '' ?></td>
+                            <td class="td-val val-nama cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama" style="font-family: 'Cinzel', 'Montserrat', serif; font-size: <?= (int)($template['font_size_nama'] ?: 18) ?>px; font-weight: 900; color: #071E3D !important; letter-spacing: 1px;"><?= esc($item['nama_pemenang']) ?></td>
                         </tr>
                         <tr>
                             <td class="td-label">Nomor Lomba</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val" style="font-weight: 800; color: #0A2540;"><?= esc($item['nomor_lomba']) ?></td>
+                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba" style="font-weight: 800; color: #0A2540;"><?= esc($item['nomor_lomba']) ?></td>
                         </tr>
                         <tr>
                             <td class="td-label">Sebagai Juara</td>
                             <td class="td-sep">:</td>
                             <td class="td-val">
-                                <span class="portrait-prestige-juara-badge">
+                                <span class="portrait-prestige-juara-badge cert-live-juara-ribbon cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit juara">
                                     ★ JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) ★
                                 </span>
                             </td>
@@ -3362,7 +3601,7 @@ PLT PASI Jateng")) ?></div>
                         <tr>
                             <td class="td-label">Prestasi</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val" style="font-weight: 700; color: #0A2540;"><?= esc($item['prestasi'] ?: '-') ?></td>
+                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi" style="font-weight: 700; color: #0A2540;"><?= esc($item['prestasi'] ?: '-') ?></td>
                         </tr>
                     </table>
 
@@ -3382,8 +3621,20 @@ PLT PASI Jateng")) ?></div>
                     </div>
                 </div>
 
-                <!-- Bagian Tanda Tangan: Triple Signatures Resmi Eks-Karesidenan -->
-                <div class="portrait-signatures-triple">
+                <!-- Bagian Tanda Tangan: Otomatis Single (Usia 5-7 th) vs Triple (KU 10-18) -->
+                <!-- 1. Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                <div class="portrait-official-signature-center sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?>">
+                    <div class="sig-unit-title" style="color: #071E3D; font-weight: 700;"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                    <div class="sig-unit-img-box">
+                        <?php if ($url2): ?>
+                            <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="sig-unit-img">
+                        <?php endif; ?>
+                    </div>
+                    <div class="sig-unit-name" style="color: #071E3D; font-weight: 800;"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                </div>
+
+                <!-- 2. Triple Signatures Resmi Eks-Karesidenan untuk KU 10-18 -->
+                <div class="portrait-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? 'display:block;' : 'display:none;' ?>">
                     <div class="sig-top-pair">
                         <!-- TTD 1: Korwil -->
                         <div class="sig-unit">
@@ -3545,10 +3796,6 @@ PLT PASI Jateng")) ?></div>
                         <?= esc($item['nama_pemenang']) ?>
                     </div>
 
-                    <div class="fed-origin-text">
-                        Kontingen : <strong><?= esc($item['asal_kota']) ?><?= (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen') ? ' - ' . esc($item['asal_sekolah']) : '' ?></strong>
-                    </div>
-
                     <div class="fed-merit-text">
                         Atas prestasi gemilang yang berhasil diraih sebagai :
                     </div>
@@ -3583,49 +3830,65 @@ PLT PASI Jateng")) ?></div>
                         Slawi, <?= esc($item['tanggal']) ?>
                     </div>
 
-                    <!-- 2 Kolom Atas: Korwil & Ketua Panitia -->
-                    <div class="fed-sig-grid">
-                        <div class="fed-sig-cell cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
-                            <div class="fed-sig-title">
-                                <?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?>
-                            </div>
-                            <div class="fed-sig-img-box">
-                                <?php if ($url1): ?>
-                                    <img src="<?= $url1 ?>" alt="TTD 1">
-                                <?php endif; ?>
-                            </div>
-                            <div class="fed-sig-name">
-                                <?= esc($template['ttd_1_nama'] ?: 'Jumanto, S.Pd., M.Si.') ?>
-                            </div>
-                        </div>
-
-                        <div class="fed-sig-cell cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
-                            <div class="fed-sig-title">
-                                <?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?>
-                            </div>
-                            <div class="fed-sig-img-box">
-                                <?php if ($url2): ?>
-                                    <img src="<?= $url2 ?>" alt="TTD 2">
-                                <?php endif; ?>
-                            </div>
-                            <div class="fed-sig-name">
-                                <?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 1 Kolom Bawah: Pengprov PASI Jateng + Stempel Resmi -->
-                    <div class="fed-sig-center-cell cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
+                    <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                    <div class="fed-sig-center-cell sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:flex;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto;">
                         <div class="fed-sig-title">
-                            <?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,\nPengurus Provinsi PASI Jawa Tengah\nPlt. Ketua Umum")) ?>
+                            <?= nl2br(esc($jabatanKetuaPekalongan)) ?>
                         </div>
                         <div class="fed-sig-img-box">
-                            <?php if ($url3): ?>
-                                <img src="<?= $url3 ?>" alt="TTD 3 & Stempel">
+                            <?php if ($url2): ?>
+                                <img src="<?= $url2 ?>" alt="TTD & Stempel PASI Kota Pekalongan">
                             <?php endif; ?>
                         </div>
                         <div class="fed-sig-name">
-                            <?= esc($template['ttd_3_nama'] ?: 'Dr. Agus Widodo Suripto, M. Pd.') ?>
+                            <?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?>
+                        </div>
+                    </div>
+
+                    <!-- Triple Signatures untuk KU 10-18 -->
+                    <div class="sig-container-triple" style="<?= !$isUsia567 ? 'display:block;' : 'display:none;' ?> width: 100%;">
+                        <div class="fed-sig-grid">
+                            <div class="fed-sig-cell cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
+                                <div class="fed-sig-title">
+                                    <?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?>
+                                </div>
+                                <div class="fed-sig-img-box">
+                                    <?php if ($url1): ?>
+                                        <img src="<?= $url1 ?>" alt="TTD 1">
+                                    <?php endif; ?>
+                                </div>
+                                <div class="fed-sig-name">
+                                    <?= esc($template['ttd_1_nama'] ?: 'Jumanto, S.Pd., M.Si.') ?>
+                                </div>
+                            </div>
+
+                            <div class="fed-sig-cell cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="fed-sig-title">
+                                    <?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?>
+                                </div>
+                                <div class="fed-sig-img-box">
+                                    <?php if ($url2): ?>
+                                        <img src="<?= $url2 ?>" alt="TTD 2">
+                                    <?php endif; ?>
+                                </div>
+                                <div class="fed-sig-name">
+                                    <?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fed-sig-center-cell cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
+                            <div class="fed-sig-title">
+                                <?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,\nPengurus Provinsi PASI Jawa Tengah\nPlt. Ketua Umum")) ?>
+                            </div>
+                            <div class="fed-sig-img-box">
+                                <?php if ($url3): ?>
+                                    <img src="<?= $url3 ?>" alt="TTD 3 & Stempel">
+                                <?php endif; ?>
+                            </div>
+                            <div class="fed-sig-name">
+                                <?= esc($template['ttd_3_nama'] ?: 'Dr. Agus Widodo Suripto, M. Pd.') ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3700,11 +3963,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill">
@@ -3721,7 +3980,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -3866,7 +4135,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -3970,11 +4249,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #004B87; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill" style="background: #002B49;">
@@ -3991,7 +4266,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -4095,11 +4380,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #047857; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill" style="background: #064E3B;">
@@ -4116,7 +4397,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -4214,11 +4505,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #475569; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill" style="background: #004B87;">
@@ -4235,7 +4522,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -4334,11 +4631,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #047857; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill" style="background: #064E3B;">
@@ -4355,7 +4648,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -4447,11 +4750,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #881337; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill" style="background: #881337;">
@@ -4468,7 +4767,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -4564,11 +4873,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
                         </div>
 
-                        <?php if (!empty($item['asal_sekolah']) && $item['asal_sekolah'] !== 'Independen'): ?>
-                            <div style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; color: #004B87; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px;">
-                                <?= esc($item['asal_sekolah']) ?> &bull; <?= esc($item['asal_kota']) ?>
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="d-block my-2">
                             <div class="canva-juara-pill" style="background: #002B49;">
@@ -4585,7 +4890,17 @@ PLT PASI Jateng")) ?></div>
                     <!-- Signatures (Persis 100% dengan Piagam Resmi Awal PASI) -->
                                         <!-- Signatures Resmi (Disinkronkan dengan Format Resmi Pertama: Korwil, PLT PASI Jateng, Panitia) -->
                     <div class="sign-row-official" style="width: 100%; margin-top: auto; padding: 0 15px 4px 15px;">
-                        <div class="overlay-signatures-triple" style="position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
+                        <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
+                        <div class="sig-container-single-pekalongan cert-drag-item" data-drag-key="ttd_pekalongan" data-drag-name="TTD Ketua PASI Kota Pekalongan" style="<?= $isUsia567 ? 'display:block;' : 'display:none;' ?> text-align: center; margin: 4px auto 0 auto; width: 300px;">
+                            <div class="overlay-sig-title"><?= nl2br(esc($jabatanKetuaPekalongan)) ?></div>
+                            <div class="overlay-sig-img-box" style="height: 125px; margin: -10px 0 -12px 0;">
+                                <?php if ($url2): ?>
+                                    <img src="<?= $url2 ?>" alt="TTD & Stempel Resmi PASI Kota Pekalongan" class="overlay-sig-img" style="height: 125px; max-height: 125px; max-width: 270px;">
+                                <?php endif; ?>
+                            </div>
+                            <div class="overlay-sig-name"><?= esc($template['ttd_2_nama'] ?: 'Zaini, S.Pd.') ?></div>
+                        </div>
+                        <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
                             <div class="overlay-sig-col">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
@@ -4813,10 +5128,232 @@ function switchCertificateTheme(themeName) {
         if (tid && tid !== currentTid) {
             const url = new URL(window.location.href);
             url.searchParams.set('template_id', tid);
+
+            // Bawa data atlet/peserta aktif agar saat switch template teks TIDAK RESET ke "NAMA PESERTA"
+            const liveData = getActiveParticipantData();
+            if (liveData) {
+                if (liveData.nama_pemenang) url.searchParams.set('nama_pemenang', liveData.nama_pemenang);
+                if (liveData.asal_sekolah) url.searchParams.set('asal_sekolah', liveData.asal_sekolah);
+                if (liveData.asal_kota) url.searchParams.set('asal_kota', liveData.asal_kota);
+                if (liveData.nomor_lomba) url.searchParams.set('nomor_lomba', liveData.nomor_lomba);
+                if (liveData.peringkat) url.searchParams.set('peringkat', liveData.peringkat);
+                if (liveData.prestasi && liveData.prestasi !== '-') url.searchParams.set('prestasi', liveData.prestasi);
+                if (liveData.nomor_piagam) url.searchParams.set('nomor_piagam', liveData.nomor_piagam);
+            }
+
             window.location.href = url.toString();
             return;
         }
     }
+
+function toggleEditDataPanel() {
+    const p = document.getElementById('editDataPanel');
+    if (p) {
+        const isHidden = (p.style.display === 'none' || p.style.display === '');
+        p.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+            setTimeout(() => {
+                const inp = document.getElementById('edit_nama_pemenang');
+                if (inp) {
+                    inp.focus();
+                    inp.select();
+                }
+            }, 100);
+        }
+    }
+}
+
+function getActiveParticipantData() {
+    const namaInp = document.getElementById('edit_nama_pemenang');
+    const namaEl = document.querySelector('.cert-live-nama, .val-nama, .canva-athlete-name');
+    const namaVal = (namaInp && namaInp.value) ? namaInp.value.trim() : (namaEl ? namaEl.innerText.trim() : '');
+
+    return {
+        nama_pemenang: namaVal,
+        asal_sekolah: document.getElementById('edit_asal_sekolah')?.value?.trim() || '',
+        asal_kota: document.getElementById('edit_asal_kota')?.value?.trim() || 'Kota Pekalongan',
+        nomor_lomba: document.getElementById('edit_nomor_lomba')?.value?.trim() || document.querySelector('.cert-live-lomba')?.innerText?.trim() || '',
+        peringkat: document.getElementById('edit_peringkat')?.value || '1',
+        prestasi: document.getElementById('edit_prestasi')?.value?.trim() || '-',
+        nomor_piagam: document.getElementById('edit_nomor_piagam')?.value?.trim() || ''
+    };
+}
+
+function saveDataToUrl() {
+    const data = getActiveParticipantData();
+    const url = new URL(window.location.href);
+    if (data.nama_pemenang) url.searchParams.set('nama_pemenang', data.nama_pemenang);
+    if (data.asal_sekolah) url.searchParams.set('asal_sekolah', data.asal_sekolah);
+    if (data.asal_kota) url.searchParams.set('asal_kota', data.asal_kota);
+    if (data.nomor_lomba) url.searchParams.set('nomor_lomba', data.nomor_lomba);
+    if (data.peringkat) url.searchParams.set('peringkat', data.peringkat);
+    if (data.prestasi && data.prestasi !== '-') url.searchParams.set('prestasi', data.prestasi);
+    if (data.nomor_piagam) url.searchParams.set('nomor_piagam', data.nomor_piagam);
+    window.history.replaceState({}, '', url.toString());
+
+    alert('Data peserta berhasil disimpan! URL browser telah diperbarui.');
+}
+
+function detectKotaFromSchool(name) {
+    if (!name) return 'Kota Pekalongan';
+    const n = name.toUpperCase();
+    if (/(BREBES|BUMIAYU|TONJONG|LARANGAN|KETANGGUNGAN|BULAKAMBA|JATIBARANG|SONGGOM|PAGUYANGAN|SIRAMPOG|LOSARI|TANJUNG|BANJARHARJO|SALEM|BANTARKAWUNG|BREGAS)/.test(n)) return 'Kabupaten Brebes';
+    if (/(PEMALANG|COMAL|PETARUKAN|ULUJAMI|AMPELGADING|BODEH|MOGA|RANDUDONGKAL|BELIK|WATUKUMPUL|BANTARBOLANG|WARUNGPRING|SIMA|KARANGTALOK|JATINGARANG)/.test(n)) return 'Kabupaten Pemalang';
+    if (/(BATANG|KANDEMAN|WARUNGASEM|BANDAR|SUBAH|LIMPUNG|GRINGSING|BANYUPUTIH|PROYONANGGAN|KLIDANG|REBAN|BLADO|TERSONO|BAWANG|WONOTUNGGAL|PECALUNGAN|LSS|LSSC|SAAM UNIVERSE|KARTIKA AZAKA|BAKTI BATANG|CAHAYA QURAN)/.test(n)) return 'Kabupaten Batang';
+    if (/SDN?\s+KAUMAN\s+0[136]/.test(n)) return 'Kabupaten Batang';
+    if (/(IHSANIYAH TEGAL|KOTA TEGAL)/.test(n)) return 'Kota Tegal';
+    if (/(SLAWI|ADIWERNA|TARUB|DUKUHTURI|KRAMAT|SURADADI|WARUREJA|TALANG|PANGKAH|KEDUNGBANTENG|BUMIJAWA|MARGASARI|BALAPULANG|LEBAKSIU|JATINEGARA|PAGERBARANG|DUKUHWARU|KAB\.?\s*TEGAL|KABUPATEN TEGAL|TEMBOK KIDUL)/.test(n)) {
+        if (/(KRAMAT\s*SARI|KRAMATSARI)/.test(n)) return 'Kota Pekalongan';
+        return 'Kabupaten Tegal';
+    }
+    if (n.includes('TEGAL') && !n.includes('TEGALREJO')) return 'Kabupaten Tegal';
+    if (/(KAB\.?\s*PEKALONGAN|KAJEN|KEDUNGWUNI|WIRADESA|BOJONG|SRAGI|KESESI|DORO|KARANGANYAR|KARANGDADAP|WONOPRINGGO|BUARAN|WONOKERTO|PANINGGARAN|PETUNGKRIYONO|LEBAKBARANG|TALUN|PEKAJANGAN|BLIGO|SAPUGARUT|GEMBONG|BABALAN|LEGOKCLILE|JAJARWAYANG|BOJONGMINGGIR|NOTOGIWANG|BONDANSARI|WANGANDOWO|KRANJI|SIWALAN|API-API|KARANG ASAM|PAESAN|KEMPLONG|BEBEL|ALMALIKI|GUMAWANG|PURI|BOJONG RAYA)/.test(n)) return 'Kabupaten Pekalongan';
+    return 'Kota Pekalongan';
+}
+
+
+function updateLiveTtdFormat(mode) {
+    document.querySelectorAll('.piagam-sheet').forEach(sheet => {
+        let is567 = (sheet.getAttribute('data-is-usia-567') === '1');
+        if (mode === 'single_pekalongan') {
+            is567 = true;
+        } else if (mode === 'triple') {
+            is567 = false;
+        } else if (mode === 'auto') {
+            const lombaText = sheet.querySelector('.cert-live-lomba')?.innerText || '';
+            if (/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i.test(lombaText)) {
+                is567 = true;
+            } else {
+                is567 = (sheet.getAttribute('data-is-usia-567') === '1');
+            }
+        }
+
+        const singleEls = sheet.querySelectorAll('.sig-container-single-pekalongan');
+        const tripleEls = sheet.querySelectorAll('.sig-container-triple');
+
+        singleEls.forEach(el => {
+            if (el.classList.contains('fed-sig-center-cell')) {
+                el.style.display = is567 ? 'flex' : 'none';
+            } else {
+                el.style.display = is567 ? 'block' : 'none';
+            }
+        });
+        tripleEls.forEach(el => {
+            if (el.classList.contains('overlay-signatures-triple')) {
+                el.style.display = is567 ? 'none' : 'flex';
+            } else {
+                el.style.display = is567 ? 'none' : 'block';
+            }
+        });
+    });
+}
+
+function updateLiveField(field, val) {
+    if (field === 'nama') {
+        const els = document.querySelectorAll('.cert-live-nama, .val-nama, .canva-athlete-name, .canva-name-script, .canva-name-serif, .fed-athlete-name, .td-val.val-nama');
+        els.forEach(el => {
+            el.innerText = val;
+        });
+        const inp = document.getElementById('edit_nama_pemenang');
+        if (inp && inp.value !== val) inp.value = val;
+    } else if (field === 'sekolah') {
+        updateCompositeAsal();
+    } else if (field === 'kota') {
+        updateCompositeAsal();
+    } else if (field === 'lomba') {
+        document.querySelectorAll('.cert-live-lomba').forEach(el => el.innerText = val);
+        const inp = document.getElementById('edit_nomor_lomba');
+        if (inp && inp.value !== val) inp.value = val;
+
+        // Jika mode TTD 'auto', perbarui format TTD sesuai nomor lomba yang diketik
+        const activeRadio = document.querySelector('input[name="live_ttd_mode"]:checked');
+        if (!activeRadio || activeRadio.value === 'auto') {
+            updateLiveTtdFormat('auto');
+        }
+    } else if (field === 'prestasi') {
+        document.querySelectorAll('.cert-live-prestasi').forEach(el => el.innerText = val || '-');
+        const inp = document.getElementById('edit_prestasi');
+        if (inp && inp.value !== val) inp.value = val;
+    } else if (field === 'nomor') {
+        document.querySelectorAll('.cert-live-nomor').forEach(el => el.innerText = val);
+        const inp = document.getElementById('edit_nomor_piagam');
+        if (inp && inp.value !== val) inp.value = val;
+    }
+}
+
+function updateCompositeAsal() {
+    const sekolah = document.getElementById('edit_asal_sekolah')?.value?.trim() || '';
+    const textVal = sekolah || 'Independen';
+
+    document.querySelectorAll('.cert-live-asal').forEach(el => {
+        el.innerText = textVal;
+    });
+    document.querySelectorAll('.canva-athlete-origin strong').forEach(el => {
+        el.innerText = textVal;
+    });
+}
+
+function updateLiveJuara(rank) {
+    const r = parseInt(rank) || 1;
+    const texts = {
+        1: { teks: 'Satu', romawi: 'I' },
+        2: { teks: 'Dua', romawi: 'II' },
+        3: { teks: 'Tiga', romawi: 'III' },
+        4: { teks: 'Empat', romawi: 'IV' },
+        5: { teks: 'Lima', romawi: 'V' }
+    };
+    const t = texts[r] || { teks: String(r), romawi: String(r) };
+
+    document.querySelectorAll('.cert-live-juara').forEach(el => {
+        el.innerText = `${r} (${t.teks.toUpperCase()})`;
+    });
+    document.querySelectorAll('.cert-live-juara-ribbon, .canva-zone-ribbon span').forEach(el => {
+        el.innerText = `★ JUARA ${r} (${t.teks.toUpperCase()}) ★`;
+    });
+}
+
+// Event listener untuk inline WYSIWYG editing langsung di lembar sertifikat
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('cert-live-nama') || e.target.classList.contains('val-nama') || e.target.classList.contains('canva-athlete-name')) {
+        const val = e.target.innerText;
+        const inp = document.getElementById('edit_nama_pemenang');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.cert-live-nama, .val-nama, .canva-athlete-name, .canva-name-script').forEach(el => {
+            if (el !== e.target) el.innerText = val;
+        });
+    } else if (e.target.classList.contains('cert-live-asal')) {
+        const val = e.target.innerText;
+        const inp = document.getElementById('edit_asal_sekolah');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.cert-live-asal').forEach(el => {
+            if (el !== e.target) el.innerText = val;
+        });
+        document.querySelectorAll('.canva-athlete-origin strong').forEach(el => {
+            if (el !== e.target) el.innerText = val;
+        });
+    } else if (e.target.classList.contains('cert-live-lomba')) {
+        const val = e.target.innerText;
+        const inp = document.getElementById('edit_nomor_lomba');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.cert-live-lomba').forEach(el => {
+            if (el !== e.target) el.innerText = val;
+        });
+    } else if (e.target.classList.contains('cert-live-prestasi')) {
+        const val = e.target.innerText;
+        const inp = document.getElementById('edit_prestasi');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.cert-live-prestasi').forEach(el => {
+            if (el !== e.target) el.innerText = val;
+        });
+    } else if (e.target.classList.contains('cert-live-nomor')) {
+        const val = e.target.innerText;
+        const inp = document.getElementById('edit_nomor_piagam');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.cert-live-nomor').forEach(el => {
+            if (el !== e.target) el.innerText = val;
+        });
+    }
+});
 
     let isPortrait = false;
     if (sel && sel.selectedIndex >= 0) {
@@ -5549,6 +6086,21 @@ document.addEventListener('DOMContentLoaded', function() {
     })();
     <?php endif; ?>
     <?php endforeach; ?>
+});
+</script>
+
+<script>
+// Bersihkan judul halaman secara dinamis saat dialog print terbuka
+// agar teks judul tidak muncul pada header bawaan cetakan browser
+let _savedDocTitle = '';
+window.addEventListener('beforeprint', function() {
+    _savedDocTitle = document.title;
+    document.title = '';
+});
+window.addEventListener('afterprint', function() {
+    if (_savedDocTitle) {
+        document.title = _savedDocTitle;
+    }
 });
 </script>
 
