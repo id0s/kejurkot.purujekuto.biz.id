@@ -652,22 +652,96 @@
 
         /* --- KHUSUS USIA DINI (KU 5, 6, 7 / BACKGROUND DENGAN TROPHY DI KIRI) --- */
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-content-wrapper {
-            left: 45mm;
-            right: 15mm;
+            top: 24mm;
+            left: 36mm;
+            right: 14mm;
+            bottom: 42mm;
             align-items: center;
         }
 
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-top-header {
+            margin-bottom: 1.5mm;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-header-line {
+            font-size: 13.5px;
+            letter-spacing: 1.1px;
+            line-height: 1.25;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-title-box {
+            margin-bottom: 2mm;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-title-text {
+            font-size: 28px !important;
+            letter-spacing: 2px !important;
+            margin-bottom: 1mm;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-nomor-line {
+            font-size: 13px;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-intro-p {
+            font-size: 12px !important;
+            line-height: 1.45;
+            max-width: 480px;
+            margin-bottom: 2.5mm !important;
+        }
+
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-list {
-            width: 100%;
-            max-width: 530px;
-            margin: 0 auto 4mm auto;
-            padding-left: 20px;
+            width: auto;
+            min-width: 440px;
+            max-width: 540px;
+            margin: 0 auto 3mm auto;
+            padding: 0;
             box-sizing: border-box;
         }
 
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row {
+            padding: 2.5px 6px;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .lbl {
+            width: 115px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .sep {
+            width: 16px;
+            font-size: 15px;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .val {
+            font-size: 14.5px;
+            white-space: nowrap;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .val-nama {
+            font-size: 20px;
+            font-weight: 900;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-closing-p {
+            font-size: 11.5px !important;
+            line-height: 1.45;
+            max-width: 490px;
+            margin: 0 auto;
+        }
+
         .piagam-sheet.is-usia-567.sheet-portrait .portrait-official-signature-center {
-            left: 56% !important;
+            bottom: 11% !important;
+            left: 55% !important;
             transform: translateX(-50%) !important;
+            width: 280px;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .sig-unit-img {
+            max-height: 68px;
         }
 
         .overlay-data-row .val {
