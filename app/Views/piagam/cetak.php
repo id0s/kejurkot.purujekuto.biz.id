@@ -2249,13 +2249,29 @@ if (!function_exists('formatNomorLomba567')) {
     }
 }
 
-if (!function_exists('formatPrestasi567')) {
-    function formatPrestasi567($rawPrestasi) {
+if (!function_exists('formatPrestasiPiagam')) {
+    function formatPrestasiPiagam($rawPrestasi, $nomorLomba = '') {
         $p = trim((string)$rawPrestasi);
-        if (empty($p) || $p === '-' || $p === '0' || $p === '00:00.00' || $p === '0.00') {
+        $isField = (bool)preg_match('/(tolak|lempar|lompat|cakram|peluru|lembing)/i', $nomorLomba);
+
+        if ($isField) {
+            if (empty($p) || $p === '-' || $p === '0' || $p === '0.00' || $p === '00.00') {
+                return '0.00 m';
+            }
+            if (preg_match('/^(\d+(\.\d+)?)\s*m?$/i', $p, $m)) {
+                return $m[1] . ' m';
+            }
+            return $p;
+        }
+
+        // Nomor Lari / Waktu / Seluruh Nomor Lomba Lainnya:
+        if (empty($p) || $p === '-' || $p === '0' || $p === '00:00.00' || $p === '0.00' || $p === '0:00') {
             return '0:00.00';
         }
-        if (preg_match('/^\d{1,2}:\d{2}\.\d{2}$/', $p)) {
+        if (preg_match('/^\d{1,2}:\d{2}(\.\d{2})?$/', $p)) {
+            if (!str_contains($p, '.')) {
+                return $p . '.00';
+            }
             return $p;
         }
         if (preg_match('/^(\d{1,2})\.(\d{2})$/', $p, $m)) {
@@ -2285,11 +2301,11 @@ $firstCleanNomor = trim(preg_replace('/^(NO|NOMOR)\s*:\s*/i', '', $firstItem['no
 if ($firstIs567) {
     $firstCleanNomor = formatNomorPiagam567($firstCleanNomor, 0);
     $firstLomba = formatNomorLomba567($firstItem['nomor_lomba'] ?? '');
-    $firstPrestasi = formatPrestasi567($firstItem['prestasi'] ?? '');
 } else {
     $firstLomba = $firstItem['nomor_lomba'] ?? 'Lari 100 M KU 16-18 Putra';
-    $firstPrestasi = $firstItem['prestasi'] ?: '-';
 }
+// Format prestasi berlaku untuk SELURUH nomor lomba
+$firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba);
 ?>
 <div id="editDataPanel" class="adjuster-floating-panel" style="display: none; width: 720px; max-width: 96vw; background: rgba(15, 23, 42, 0.98); border: 2px solid #F59E0B; box-shadow: 0 20px 45px rgba(0,0,0,0.7); border-radius: 14px;">
     <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary">
@@ -2441,13 +2457,13 @@ if ($firstIs567) {
         $cleanNomor = formatNomorPiagam567($cleanNomor, $idx);
         $displayKalimatPembuka = "Pengurus Kota Persatuan Atletik Seluruh Indonesia (PASI) Kota Pekalongan dengan ini memberikan Piagam Penghargaan kepada :";
         $displayNomorLomba = formatNomorLomba567($item['nomor_lomba'] ?? '');
-        $displayPrestasi = formatPrestasi567($item['prestasi'] ?? '');
+        $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba);
         $displayKalimatPenutup = "dalam Kejuaraan Atletik KU 567 Tahun Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
     } else {
         $displayHeaderLines = explode("\n", trim($template['instansi_header'] ?: "PENGURUS PROVINSI PERSATUAN ATLETIK\nSELURUH INDONESIA\nJAWA TENGAH"));
         $displayKalimatPembuka = $template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :';
         $displayNomorLomba = $item['nomor_lomba'];
-        $displayPrestasi = $item['prestasi'] ?: '-';
+        $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba);
         $tglStr = $item['tanggal'] ?: '27 September 2026';
         $tmptStr = $item['tempat'] ?: 'Stadion Hoegeng Kota Pekalongan';
         $displayKalimatPenutup = $template['kalimat_penghargaan'] ? str_replace(['{tanggal}', '{tempat}'], [$tglStr, $tmptStr], $template['kalimat_penghargaan']) : "dalam Kejuaraan Atletik Tingkat Eks Karesidenan Pekalongan yang diselenggarakan pada tanggal {$tglStr} di {$tmptStr}.";
