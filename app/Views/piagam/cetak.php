@@ -49,11 +49,11 @@
         ?>
 
         @page {
-            size: A4 <?= $isLandscape ? 'landscape' : 'portrait' ?>;
+            size: <?= $isLandscape ? '330mm 215mm' : '215mm 330mm' ?>;
             margin: 0mm !important;
         }
 
-        /* Container lembar halaman piagam */
+        /* Container lembar halaman piagam (Default F4: 215 x 330 mm) */
         .piagam-sheet {
             position: relative;
             background-color: #FFFFFF;
@@ -62,7 +62,7 @@
             overflow: hidden;
             page-break-after: always;
             page-break-inside: avoid;
-            <?= $isLandscape ? 'width: 297mm; height: 210mm;' : 'width: 210mm; height: 297mm;' ?>
+            <?= $isLandscape ? 'width: 330mm; height: 215mm;' : 'width: 215mm; height: 330mm;' ?>
         }
 
         .piagam-sheet:last-child {
@@ -89,7 +89,7 @@
 
         @media print {
             @page {
-                size: A4 <?= $isLandscape ? 'landscape' : 'portrait' ?>;
+                size: <?= $isLandscape ? '330mm 215mm' : '215mm 330mm' ?>;
                 margin: 0mm !important;
             }
             html, body {
@@ -2006,6 +2006,19 @@
 
     <span class="border-start border-secondary h-50 mx-1"></span>
 
+    <!-- Selector Ukuran Kertas: F4 (Folio 215x330mm) vs A4 (210x297mm) -->
+    <div class="d-flex align-items-center gap-1">
+        <span class="small text-white-50 fw-semibold d-none d-md-inline text-nowrap">
+            <i class="bi bi-aspect-ratio text-info me-1"></i> Kertas:
+        </span>
+        <select id="paperSizeSwitcher" class="form-select form-select-sm fw-bold border-info bg-dark text-info rounded-pill px-2 shadow-sm" style="width: auto; min-width: 140px;" onchange="switchPaperSize(this.value)" title="Pilih ukuran kertas cetak: F4 / Folio (215x330mm) atau A4 (210x297mm)">
+            <option value="F4" selected>📄 F4 (215×330 mm)</option>
+            <option value="A4">📄 A4 (210×297 mm)</option>
+        </select>
+    </div>
+
+    <span class="border-start border-secondary h-50 mx-1"></span>
+
     <!-- Tombol Mode Geser Elemen (Drag & Drop Interaktif Langsung) -->
     <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm" id="btnToggleDrag" onclick="toggleDragMode()">
         <i class="bi bi-arrows-move text-warning"></i>
@@ -2280,7 +2293,6 @@
                 placeholder="001/SERT/PASIJATENG/IX/2026" 
                 oninput="updateLiveField('nomor', this.value)">
         </div>
-    </div>
 
         <!-- Format Tanda Tangan: Triple vs Single Usia 5, 6, 7 th -->
         <div class="col-md-12 mt-2 pt-2 border-top border-secondary">
@@ -2310,6 +2322,7 @@
         </div>
     </div>
 
+    <!-- Footer Action Buttons inside editDataPanel -->
     <div class="d-flex align-items-center justify-content-between mt-3 pt-2 border-top border-secondary">
         <div class="small text-white-50">
             <i class="bi bi-lightbulb-fill text-warning me-1"></i>
@@ -5117,6 +5130,56 @@ function selectCanvaTheme(themeName) {
     }
 }
 
+let currentPaperSize = 'F4'; // 'F4' (215x330mm) atau 'A4' (210x297mm)
+let currentOrientation = '<?= $isLandscape ? 'landscape' : 'portrait' ?>';
+
+function switchPaperSize(size) {
+    currentPaperSize = size;
+    applyPaperSize();
+}
+
+function applyPaperSize() {
+    const isPortrait = (currentOrientation === 'portrait');
+    let wMm, hMm;
+    if (currentPaperSize === 'A4') {
+        wMm = isPortrait ? 210 : 297;
+        hMm = isPortrait ? 297 : 210;
+    } else { // F4 / Folio (215 x 330 mm standar resmi piagam)
+        wMm = isPortrait ? 215 : 330;
+        hMm = isPortrait ? 330 : 215;
+    }
+
+    let dynStyle = document.getElementById('dynamic-paper-style');
+    if (!dynStyle) {
+        dynStyle = document.createElement('style');
+        dynStyle.id = 'dynamic-paper-style';
+        document.head.appendChild(dynStyle);
+    }
+
+    const pageSizeCss = (currentPaperSize === 'A4')
+        ? `A4 ${isPortrait ? 'portrait' : 'landscape'}`
+        : `${wMm}mm ${hMm}mm`;
+
+    dynStyle.innerHTML = `
+        @media print {
+            @page {
+                size: ${pageSizeCss} !important;
+                margin: 0mm !important;
+            }
+            .piagam-sheet {
+                width: ${wMm}mm !important;
+                height: ${hMm}mm !important;
+                margin: 0 !important;
+            }
+        }
+    `;
+
+    document.querySelectorAll('.piagam-sheet').forEach(sheet => {
+        sheet.style.width = `${wMm}mm`;
+        sheet.style.height = `${hMm}mm`;
+    });
+}
+
 function switchCertificateTheme(themeName) {
     const sel = document.getElementById('themeSwitcher');
     if (sel && sel.selectedIndex >= 0) {
@@ -5145,6 +5208,67 @@ function switchCertificateTheme(themeName) {
             return;
         }
     }
+
+    let isPortrait = false;
+    if (sel && sel.selectedIndex >= 0) {
+        const opt = sel.options[sel.selectedIndex];
+        const ori = opt ? opt.getAttribute('data-orientasi') : null;
+        if (ori) {
+            isPortrait = (ori === 'portrait');
+        } else {
+            isPortrait = (themeName === 'portrait' || themeName === 'official_federation' || themeName === 'portrait_prestige');
+        }
+    } else {
+        isPortrait = (themeName === 'portrait' || themeName === 'official_federation' || themeName === 'portrait_prestige');
+    }
+
+    currentOrientation = isPortrait ? 'portrait' : 'landscape';
+    applyPaperSize();
+
+    // Sembunyikan seluruh varian tema di dalam sheet
+    document.querySelectorAll('.piagam-sheet').forEach(sheet => {
+        const variants = sheet.querySelectorAll('.theme-variant');
+        variants.forEach(v => v.style.display = 'none');
+
+        // Tampilkan varian tema yang dipilih
+        let activeVariant = sheet.querySelector('.theme-' + themeName);
+        if (!activeVariant && themeName === 'portrait_ekskari') {
+            activeVariant = sheet.querySelector('.theme-portrait');
+        }
+        if (activeVariant) {
+            activeVariant.style.display = 'block';
+        }
+    });
+
+    // Sinkronkan panel kalibrasi jika ada data template
+    if (sel && sel.selectedIndex >= 0) {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt) {
+            const offTop = opt.getAttribute('data-offset-top');
+            const offTtd = opt.getAttribute('data-offset-ttd');
+            const fontNama = opt.getAttribute('data-font-nama');
+            const hideHeader = opt.getAttribute('data-hide-header');
+            const hideTitle = opt.getAttribute('data-hide-title');
+
+            if (offTop !== null && document.getElementById('live_offset_top')) {
+                document.getElementById('live_offset_top').value = offTop;
+            }
+            if (offTtd !== null && document.getElementById('live_offset_ttd')) {
+                document.getElementById('live_offset_ttd').value = offTtd;
+            }
+            if (fontNama !== null && document.getElementById('live_font_nama')) {
+                document.getElementById('live_font_nama').value = fontNama;
+            }
+            if (hideHeader !== null && document.getElementById('live_hide_header')) {
+                document.getElementById('live_hide_header').checked = (hideHeader === '1');
+            }
+            if (hideTitle !== null && document.getElementById('live_hide_title')) {
+                document.getElementById('live_hide_title').checked = (hideTitle === '1');
+            }
+            applyLiveOffset();
+        }
+    }
+}
 
 function toggleEditDataPanel() {
     const p = document.getElementById('editDataPanel');
@@ -5210,7 +5334,6 @@ function detectKotaFromSchool(name) {
     if (/(KAB\.?\s*PEKALONGAN|KAJEN|KEDUNGWUNI|WIRADESA|BOJONG|SRAGI|KESESI|DORO|KARANGANYAR|KARANGDADAP|WONOPRINGGO|BUARAN|WONOKERTO|PANINGGARAN|PETUNGKRIYONO|LEBAKBARANG|TALUN|PEKAJANGAN|BLIGO|SAPUGARUT|GEMBONG|BABALAN|LEGOKCLILE|JAJARWAYANG|BOJONGMINGGIR|NOTOGIWANG|BONDANSARI|WANGANDOWO|KRANJI|SIWALAN|API-API|KARANG ASAM|PAESAN|KEMPLONG|BEBEL|ALMALIKI|GUMAWANG|PURI|BOJONG RAYA)/.test(n)) return 'Kabupaten Pekalongan';
     return 'Kota Pekalongan';
 }
-
 
 function updateLiveTtdFormat(mode) {
     document.querySelectorAll('.piagam-sheet').forEach(sheet => {
@@ -5354,82 +5477,6 @@ document.addEventListener('input', function(e) {
         });
     }
 });
-
-    let isPortrait = false;
-    if (sel && sel.selectedIndex >= 0) {
-        const opt = sel.options[sel.selectedIndex];
-        const ori = opt ? opt.getAttribute('data-orientasi') : null;
-        if (ori) {
-            isPortrait = (ori === 'portrait');
-        } else {
-            isPortrait = (themeName === 'portrait' || themeName === 'official_federation' || themeName === 'portrait_prestige');
-        }
-    } else {
-        isPortrait = (themeName === 'portrait' || themeName === 'official_federation' || themeName === 'portrait_prestige');
-    }
-
-    const sheets = document.querySelectorAll('.piagam-sheet');
-    sheets.forEach(sheet => {
-        if (isPortrait) {
-            sheet.style.width = '210mm';
-            sheet.style.height = '297mm';
-        } else {
-            sheet.style.width = '297mm';
-            sheet.style.height = '210mm';
-        }
-
-        // Sembunyikan seluruh varian tema di dalam sheet
-        const variants = sheet.querySelectorAll('.theme-variant');
-        variants.forEach(v => v.style.display = 'none');
-
-        // Tampilkan varian tema yang dipilih
-        let activeVariant = sheet.querySelector('.theme-' + themeName);
-        if (!activeVariant && themeName === 'portrait_ekskari') {
-            activeVariant = sheet.querySelector('.theme-portrait');
-        }
-        if (activeVariant) {
-            activeVariant.style.display = 'block';
-        }
-    });
-
-    // Sesuaikan style @page untuk print
-    let printStyle = document.getElementById('dynamic-print-style');
-    if (!printStyle) {
-        printStyle = document.createElement('style');
-        printStyle.id = 'dynamic-print-style';
-        document.head.appendChild(printStyle);
-    }
-    printStyle.innerHTML = `@page { size: A4 ${isPortrait ? 'portrait' : 'landscape'}; margin: 0; }`;
-
-    // Sinkronkan panel kalibrasi jika ada data template
-    if (sel && sel.selectedIndex >= 0) {
-        const opt = sel.options[sel.selectedIndex];
-        if (opt) {
-            const offTop = opt.getAttribute('data-offset-top');
-            const offTtd = opt.getAttribute('data-offset-ttd');
-            const fontNama = opt.getAttribute('data-font-nama');
-            const hideHeader = opt.getAttribute('data-hide-header');
-            const hideTitle = opt.getAttribute('data-hide-title');
-
-            if (offTop !== null && document.getElementById('live_offset_top')) {
-                document.getElementById('live_offset_top').value = offTop;
-            }
-            if (offTtd !== null && document.getElementById('live_offset_ttd')) {
-                document.getElementById('live_offset_ttd').value = offTtd;
-            }
-            if (fontNama !== null && document.getElementById('live_font_nama')) {
-                document.getElementById('live_font_nama').value = fontNama;
-            }
-            if (hideHeader !== null && document.getElementById('live_hide_header')) {
-                document.getElementById('live_hide_header').checked = (hideHeader === '1');
-            }
-            if (hideTitle !== null && document.getElementById('live_hide_title')) {
-                document.getElementById('live_hide_title').checked = (hideTitle === '1');
-            }
-            applyLiveOffset();
-        }
-    }
-}
 
 function toggleAdjusterPanel() {
     const p = document.getElementById('adjusterPanel');
