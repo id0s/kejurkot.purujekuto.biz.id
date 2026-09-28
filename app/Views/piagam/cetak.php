@@ -2219,8 +2219,78 @@
     </div>
 </div>
 
+<?php
+// Helper functions khusus pemformatan Usia Dini 5, 6, 7 Tahun sesuai regulasi panitia
+if (!function_exists('formatNomorPiagam567')) {
+    function formatNomorPiagam567($cleanNomor, $idx = 0) {
+        $nomor = trim((string)$cleanNomor);
+        $nomor = preg_replace('/PASI\.?JATENG/i', 'PASI.KOTA', $nomor);
+        $nomor = preg_replace('/\/SERT\//i', '/sert/', $nomor);
+        if (!preg_match('/PASI\.KOTA/i', $nomor)) {
+            $nomorUrut = str_pad(preg_replace('/\D/', '', $nomor) ?: ($idx + 1), 3, '0', STR_PAD_LEFT);
+            return "{$nomorUrut}/sert/PASI.KOTA/IX/2026";
+        }
+        return $nomor;
+    }
+}
+
+if (!function_exists('formatNomorLomba567')) {
+    function formatNomorLomba567($rawLomba) {
+        if (empty($rawLomba)) return '';
+        $clean = preg_replace('/juaraku\s*/i', '', $rawLomba);
+        $clean = preg_replace('/\bu[\s\-_]?5\b|\bku[\s\-_]?5\b/i', 'usia 5 tahun', $clean);
+        $clean = preg_replace('/\bu[\s\-_]?6\b|\bku[\s\-_]?6\b/i', 'usia 6 tahun', $clean);
+        $clean = preg_replace('/\bu[\s\-_]?7\b|\bku[\s\-_]?7\b/i', 'usia 7 tahun', $clean);
+        $clean = preg_replace('/\bfemale\b/i', 'putri', $clean);
+        $clean = preg_replace('/\bmale\b/i', 'putra', $clean);
+        $clean = preg_replace('/\bPutri\b/i', 'putri', $clean);
+        $clean = preg_replace('/\bPutra\b/i', 'putra', $clean);
+        return trim(preg_replace('/\s+/', ' ', $clean));
+    }
+}
+
+if (!function_exists('formatPrestasi567')) {
+    function formatPrestasi567($rawPrestasi) {
+        $p = trim((string)$rawPrestasi);
+        if (empty($p) || $p === '-' || $p === '0' || $p === '00:00.00' || $p === '0.00') {
+            return '0:00.00';
+        }
+        if (preg_match('/^\d{1,2}:\d{2}\.\d{2}$/', $p)) {
+            return $p;
+        }
+        if (preg_match('/^(\d{1,2})\.(\d{2})$/', $p, $m)) {
+            return sprintf('0:%02d.%02d', (int)$m[1], (int)$m[2]);
+        }
+        if (preg_match('/^(\d{1,2})\.(\d{2})\s*(dtk|detik|s)?$/i', $p, $m)) {
+            return sprintf('0:%02d.%02d', (int)$m[1], (int)$m[2]);
+        }
+        return $p;
+    }
+}
+?>
+
 <!-- Floating Panel Edit Data Peserta / Atlet (Live Sync) -->
-<?php $firstItem = $piagamList[0] ?? []; ?>
+<?php 
+$firstItem = $piagamList[0] ?? []; 
+$firstKuCheck = strtolower(($firstItem['kategori_usia'] ?? '') . ' ' . ($firstItem['nomor_lomba'] ?? ''));
+$firstIs567 = false;
+if (preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $firstKuCheck)) {
+    $firstIs567 = true;
+}
+if (isset($firstItem['hanya_ketua_pekalongan'])) {
+    $firstIs567 = (bool)$firstItem['hanya_ketua_pekalongan'];
+}
+
+$firstCleanNomor = trim(preg_replace('/^(NO|NOMOR)\s*:\s*/i', '', $firstItem['nomor_piagam'] ?? ''));
+if ($firstIs567) {
+    $firstCleanNomor = formatNomorPiagam567($firstCleanNomor, 0);
+    $firstLomba = formatNomorLomba567($firstItem['nomor_lomba'] ?? '');
+    $firstPrestasi = formatPrestasi567($firstItem['prestasi'] ?? '');
+} else {
+    $firstLomba = $firstItem['nomor_lomba'] ?? 'Lari 100 M KU 16-18 Putra';
+    $firstPrestasi = $firstItem['prestasi'] ?: '-';
+}
+?>
 <div id="editDataPanel" class="adjuster-floating-panel" style="display: none; width: 720px; max-width: 96vw; background: rgba(15, 23, 42, 0.98); border: 2px solid #F59E0B; box-shadow: 0 20px 45px rgba(0,0,0,0.7); border-radius: 14px;">
     <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary">
         <div class="fw-bold text-warning d-flex align-items-center gap-2 fs-6">
@@ -2267,7 +2337,7 @@
                 <i class="bi bi-flag-fill me-1"></i> Nomor & Kategori Lomba:
             </label>
             <input type="text" id="edit_nomor_lomba" class="form-control form-control-sm bg-dark text-white border-secondary" 
-                value="<?= esc($firstItem['nomor_lomba'] ?? 'Lari 100 M KU 16-18 Putra') ?>" 
+                value="<?= esc($firstLomba) ?>" 
                 placeholder="Contoh: Lari 100 M KU 16-18 Putra" 
                 oninput="updateLiveField('lomba', this.value)">
         </div>
@@ -2278,8 +2348,8 @@
                 <i class="bi bi-stopwatch me-1"></i> Catatan Prestasi:
             </label>
             <input type="text" id="edit_prestasi" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" 
-                value="<?= esc($firstItem['prestasi'] ?? '-') ?>" 
-                placeholder="Contoh: 11.24 dtk" 
+                value="<?= esc($firstPrestasi) ?>" 
+                placeholder="Contoh: 0:00.00" 
                 oninput="updateLiveField('prestasi', this.value)">
         </div>
 
@@ -2289,8 +2359,8 @@
                 <i class="bi bi-hash me-1"></i> Nomor Surat / Piagam:
             </label>
             <input type="text" id="edit_nomor_piagam" class="form-control form-control-sm bg-dark text-white border-secondary font-monospace" 
-                value="<?= esc($firstItem['nomor_piagam'] ?? '') ?>" 
-                placeholder="001/SERT/PASIJATENG/IX/2026" 
+                value="<?= esc($firstCleanNomor) ?>" 
+                placeholder="<?= $firstIs567 ? '001/sert/PASI.KOTA/IX/2026' : '001/SERT/PASIJATENG/IX/2026' ?>" 
                 oninput="updateLiveField('nomor', this.value)">
         </div>
 
@@ -2346,7 +2416,14 @@
     $cleanNomor = trim(preg_replace('/^(NO|NOMOR)\s*:\s*/i', '', $item['nomor_piagam']));
 
     // Deteksi apakah nomor acara / kategori ini adalah Usia Dini 5, 6, 7 tahun (U 5, U 6, U 7 / KU 5-6 / JuarAKU)
-    // Sesuai aturan: Untuk Usia 5, 6, 7 th tanda tangan HANYA Ketua PASI Kota Pekalongan saja
+    // Sesuai instruksi:
+    // 1. Judul atas = KEJUARAAN ATLETIK USIA DINI 567 TAHUN TAHUN 2026
+    // 2. Nomor = 001/sert/PASI.KOTA/IX/2026
+    // 3. Pembuka = Pengurus Kota Persatuan Atletik Seluruh Indonesia (PASI) Kota Pekalongan dengan ini memberikan Piagam Penghargaan kepada :
+    // 4. Nomor lomba = Lari 30 m usia 5 tahun putra / putri (dan seterusnya)
+    // 5. Penutup = dalam Kejuaraan Atletik KU 567 Tahun Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.
+    // 6. Prestasi = disesuaikan format 0:00.00
+    // 7. TTD = HANYA Ketua Umum PASI Kota Pekalongan (Zaini, S.Pd.)
     $isUsia567 = false;
     $kuCheckStr = strtolower(($item['kategori_usia'] ?? '') . ' ' . ($item['nomor_lomba'] ?? ''));
     if (preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $kuCheckStr)) {
@@ -2355,6 +2432,27 @@
     if (isset($item['hanya_ketua_pekalongan'])) {
         $isUsia567 = (bool)$item['hanya_ketua_pekalongan'];
     }
+
+    if ($isUsia567) {
+        $displayHeaderLines = [
+            "KEJUARAAN ATLETIK USIA DINI 567 TAHUN",
+            "TAHUN " . ($item['tahun'] ?? '2026')
+        ];
+        $cleanNomor = formatNomorPiagam567($cleanNomor, $idx);
+        $displayKalimatPembuka = "Pengurus Kota Persatuan Atletik Seluruh Indonesia (PASI) Kota Pekalongan dengan ini memberikan Piagam Penghargaan kepada :";
+        $displayNomorLomba = formatNomorLomba567($item['nomor_lomba'] ?? '');
+        $displayPrestasi = formatPrestasi567($item['prestasi'] ?? '');
+        $displayKalimatPenutup = "dalam Kejuaraan Atletik KU 567 Tahun Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
+    } else {
+        $displayHeaderLines = explode("\n", trim($template['instansi_header'] ?: "PENGURUS PROVINSI PERSATUAN ATLETIK\nSELURUH INDONESIA\nJAWA TENGAH"));
+        $displayKalimatPembuka = $template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :';
+        $displayNomorLomba = $item['nomor_lomba'];
+        $displayPrestasi = $item['prestasi'] ?: '-';
+        $tglStr = $item['tanggal'] ?: '27 September 2026';
+        $tmptStr = $item['tempat'] ?: 'Stadion Hoegeng Kota Pekalongan';
+        $displayKalimatPenutup = $template['kalimat_penghargaan'] ? str_replace(['{tanggal}', '{tempat}'], [$tglStr, $tmptStr], $template['kalimat_penghargaan']) : "dalam Kejuaraan Atletik Tingkat Eks Karesidenan Pekalongan yang diselenggarakan pada tanggal {$tglStr} di {$tmptStr}.";
+    }
+
     $jabatanKetuaPekalongan = "Pengurus Kota PASI Pekalongan\nKetua Umum";
     ?>
     <div class="piagam-sheet" id="sheet-<?= $idx ?>" data-is-usia-567="<?= $isUsia567 ? '1' : '0' ?>">
@@ -2462,33 +2560,32 @@
 
                 <!-- ZONA 4: NOMOR LOMBA & PRESTASI (Tepat di bawah pita emas) -->
                 <div class="canva-zone-event cert-drag-item" data-drag-key="lomba" data-drag-name="Nomor Lomba">
-                    <span class="cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit lomba"><?= esc($item['nomor_lomba']) ?></span>
-                    <?php if (!empty($item['prestasi']) && $item['prestasi'] !== '-'): ?>
-                        <span class="ms-1">&bull; Prestasi: <strong class="cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit prestasi"><?= esc($item['prestasi']) ?></strong></span>
+                    <span class="cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit lomba"><?= esc($displayNomorLomba) ?></span>
+                    <?php if (!empty($displayPrestasi) && $displayPrestasi !== '-'): ?>
+                        <span class="ms-1">&bull; Prestasi: <strong class="cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit prestasi"><?= esc($displayPrestasi) ?></strong></span>
                     <?php endif; ?>
                 </div>
 
                 <!-- ZONA 5: PERNYATAAN / KALIMAT PENUTUP -->
-                <?php if (!empty(trim($template['kalimat_penghargaan'] ?? ''))): ?>
                 <div class="canva-zone-statement cert-drag-item" data-drag-key="penutup" data-drag-name="Keterangan Lomba">
-                    <?= esc(str_replace(['{tanggal}', '{tempat}'], [$item['tanggal'], $item['tempat']], $template['kalimat_penghargaan'])) ?>
+                    <?= esc($displayKalimatPenutup) ?>
                 </div>
-                <?php endif; ?>
 
             <?php else: ?>
                 <!-- Container Konten Dinamis Sesuai Format Standar (Grid Polos / Background Kosongan) -->
                 <div class="overlay-content-wrapper">
                     <!-- Header Atas: Instansi / Kejuaraan -->
-                    <?php if (empty($template['hide_header']) && !empty(trim($template['instansi_header'] ?? ''))): ?>
+                    <?php if (empty($template['hide_header']) && (!empty($displayHeaderLines) || !empty(trim($template['instansi_header'] ?? '')))): ?>
                     <div class="overlay-top-header cert-drag-item" data-drag-key="kop" data-drag-name="Kop Instansi">
                         <?php 
-                        $headerLines = explode("\n", trim($template['instansi_header']));
-                        foreach ($headerLines as $hline): 
+                        foreach ($displayHeaderLines as $hline): 
                             if (trim($hline) === '') continue;
                         ?>
                             <div class="overlay-header-line"><?= esc(trim($hline)) ?></div>
                         <?php endforeach; ?>
-                        <div class="overlay-header-line">TAHUN <?= esc($item['tahun'] ?? date('Y')) ?></div>
+                        <?php if (!$isUsia567): ?>
+                            <div class="overlay-header-line">TAHUN <?= esc($item['tahun'] ?? date('Y')) ?></div>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
 
@@ -2497,11 +2594,9 @@
                         <div class="overlay-nomor-line cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span></div>
                     </div>
 
-                    <?php if (!empty(trim($template['kalimat_pembuka'] ?? ''))): ?>
                     <p class="overlay-intro-p cert-drag-item" data-drag-key="pembuka" data-drag-name="Kalimat Pembuka">
-                        <?= esc($template['kalimat_pembuka']) ?>
+                        <?= esc($displayKalimatPembuka) ?>
                     </p>
-                    <?php endif; ?>
 
                     <div class="overlay-data-list">
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_nama" data-drag-name="Nama Atlet">
@@ -2512,7 +2607,7 @@
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_lomba" data-drag-name="Nomor Lomba">
                             <span class="lbl">Nomor Lomba</span>
                             <span class="sep">:</span>
-                            <span class="val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($item['nomor_lomba']) ?></span>
+                            <span class="val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($displayNomorLomba) ?></span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_juara" data-drag-name="Sebagai Juara">
                             <span class="lbl">Sebagai Juara</span>
@@ -2522,15 +2617,13 @@
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_prestasi" data-drag-name="Prestasi">
                             <span class="lbl">Prestasi</span>
                             <span class="sep">:</span>
-                            <span class="val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($item['prestasi'] ?: '-') ?></span>
+                            <span class="val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($displayPrestasi) ?></span>
                         </div>
                     </div>
 
-                    <?php if (!empty(trim($template['kalimat_penghargaan'] ?? ''))): ?>
                     <p class="overlay-closing-p cert-drag-item" data-drag-key="penutup" data-drag-name="Kalimat Penutup">
-                        <?= esc(str_replace(['{tanggal}', '{tempat}'], [$item['tanggal'], $item['tempat']], $template['kalimat_penghargaan'])) ?>
+                        <?= esc($displayKalimatPenutup) ?>
                     </p>
-                    <?php endif; ?>
                 <?php endif; ?>
             </div>
 
@@ -3296,13 +3389,14 @@ PLT PASI Jateng")) ?></div>
                 <!-- Header Atas: Instansi / Kejuaraan -->
                 <div class="portrait-top-header cert-drag-item" data-drag-key="kop" data-drag-name="Kop Instansi">
                     <?php 
-                    $headerLines = explode("\n", trim($template['instansi_header'] ?: "KEJUARAAN ATLETIK\nTINGKAT EKS KARESIDENAN PEKALONGAN"));
-                    foreach ($headerLines as $hline): 
+                    foreach ($displayHeaderLines as $hline): 
                         if (trim($hline) === '') continue;
                     ?>
                         <div class="portrait-header-line"><?= esc(trim($hline)) ?></div>
                     <?php endforeach; ?>
-                    <div class="portrait-header-line">TAHUN <?= esc($item['tahun'] ?? date('Y')) ?></div>
+                    <?php if (!$isUsia567): ?>
+                        <div class="portrait-header-line">TAHUN <?= esc($item['tahun'] ?? date('Y')) ?></div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Gold Banner Text Overlay -->
@@ -3311,7 +3405,7 @@ PLT PASI Jateng")) ?></div>
                         PIAGAM<br>PENGHARGAAN
                     </div>
                     <div class="portrait-banner-nomor">
-                        NOMOR : <?= esc($cleanNomor) ?>
+                        NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
                     </div>
                 </div>
 
@@ -3336,7 +3430,7 @@ PLT PASI Jateng")) ?></div>
                         <tr class="cert-drag-item" data-drag-key="row_lomba" data-drag-name="Nomor Lomba">
                             <td class="td-label">Nomor Lomba</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($item['nomor_lomba']) ?></td>
+                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($displayNomorLomba) ?></td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_juara" data-drag-name="Sebagai Juara">
                             <td class="td-label">Sebagai Juara</td>
@@ -3346,14 +3440,14 @@ PLT PASI Jateng")) ?></div>
                         <tr class="cert-drag-item" data-drag-key="row_prestasi" data-drag-name="Prestasi">
                             <td class="td-label">Prestasi</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($item['prestasi'] ?: '-') ?></td>
+                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($displayPrestasi) ?></td>
                         </tr>
                     </table>
 
                     <!-- Kalimat Penutup & 6 Titik Vertikal -->
                     <div class="portrait-closing-box cert-drag-item" data-drag-key="penutup" data-drag-name="Kalimat Penutup">
                         <p class="portrait-closing-p">
-                            dalam Kejuaraan Atletik Tingkat Eks Karesidenan Pekalongan yang diselenggarakan pada tanggal <?= esc($item['tanggal']) ?> di <?= esc($item['tempat']) ?>.
+                            <?= esc($displayKalimatPenutup) ?>
                         </p>
                         <div class="portrait-six-dots-col">
                             <span class="dot"></span>
@@ -3560,13 +3654,14 @@ PLT PASI Jateng")) ?></div>
                 <!-- Header Atas: Instansi / Kejuaraan (Deep Royal Navy, Gagah & Berwibawa) -->
                 <div class="portrait-top-header">
                     <?php 
-                    $headerLines = explode("\n", trim($template['instansi_header'] ?: "PENGURUS PROVINSI PERSATUAN ATLETIK\nSELURUH INDONESIA\nJAWA TENGAH"));
-                    foreach ($headerLines as $hline): 
+                    foreach ($displayHeaderLines as $hline): 
                         if (trim($hline) === '') continue;
                     ?>
                         <div class="portrait-header-line" style="color: #071E3D; font-weight: 900; letter-spacing: 1.2px;"><?= esc(trim($hline)) ?></div>
                     <?php endforeach; ?>
-                    <div class="portrait-header-line" style="color: #8C6D37; font-weight: 800; letter-spacing: 1.5px;">TAHUN <?= esc($item['tahun'] ?? date('Y')) ?></div>
+                    <?php if (!$isUsia567): ?>
+                        <div class="portrait-header-line" style="color: #8C6D37; font-weight: 800; letter-spacing: 1.5px;">TAHUN <?= esc($item['tahun'] ?? date('Y')) ?></div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Gold & Navy Banner Text Overlay -->
@@ -3575,7 +3670,7 @@ PLT PASI Jateng")) ?></div>
                         PIAGAM<br>PENGHARGAAN
                     </div>
                     <div class="portrait-banner-nomor" style="color: #FDE68A !important; font-weight: 800; letter-spacing: 1.8px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
-                        NOMOR : <?= esc($cleanNomor) ?>
+                        NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
                     </div>
                 </div>
 
@@ -3587,7 +3682,7 @@ PLT PASI Jateng")) ?></div>
                 <!-- Body Content -->
                 <div class="portrait-content-body">
                     <p class="portrait-intro-p" style="color: #1E293B; font-weight: 500;">
-                        <?= esc($template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :') ?>
+                        <?= esc($displayKalimatPembuka) ?>
                     </p>
 
                     <!-- Tabel 4 Data Atlet (Nama, Lomba, Juara, Prestasi) -->
@@ -3600,7 +3695,7 @@ PLT PASI Jateng")) ?></div>
                         <tr>
                             <td class="td-label">Nomor Lomba</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba" style="font-weight: 800; color: #0A2540;"><?= esc($item['nomor_lomba']) ?></td>
+                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba" style="font-weight: 800; color: #0A2540;"><?= esc($displayNomorLomba) ?></td>
                         </tr>
                         <tr>
                             <td class="td-label">Sebagai Juara</td>
@@ -3614,14 +3709,14 @@ PLT PASI Jateng")) ?></div>
                         <tr>
                             <td class="td-label">Prestasi</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi" style="font-weight: 700; color: #0A2540;"><?= esc($item['prestasi'] ?: '-') ?></td>
+                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi" style="font-weight: 700; color: #0A2540;"><?= esc($displayPrestasi) ?></td>
                         </tr>
                     </table>
 
                     <!-- Kalimat Penutup & 6 Titik Vertikal Berwarna Emas & Navy -->
                     <div class="portrait-closing-box">
                         <p class="portrait-closing-p" style="color: #334155; line-height: 1.5;">
-                            dalam Kejuaraan Atletik Tingkat Eks Karesidenan Pekalongan yang diselenggarakan pada tanggal <?= esc($item['tanggal']) ?> di <?= esc($item['tempat']) ?>.
+                            <?= esc($displayKalimatPenutup) ?>
                         </p>
                         <div class="portrait-six-dots-col">
                             <span class="dot" style="background-color: #D4AF37 !important;"></span>
@@ -3777,15 +3872,27 @@ PLT PASI Jateng")) ?></div>
                     <div class="fed-logo-box">
                         <img src="<?= base_url('assets/images/pasi_logo_transparent.png') ?>" alt="Logo PASI" class="fed-logo-img">
                     </div>
-                    <div class="fed-instansi-title">
-                        PENGURUS PROVINSI PERSATUAN ATLETIK SELURUH INDONESIA
-                    </div>
-                    <div class="fed-instansi-prov">
-                        JAWA TENGAH
-                    </div>
-                    <div class="fed-event-sub">
-                        <?= esc($template['sub_header'] ?: 'KEJUARAAN ATLETIK KELOMPOK UMUR TINGKAT EKS-KARESIDENAN PEKALONGAN TAHUN ' . ($item['tahun'] ?? date('Y'))) ?>
-                    </div>
+                    <?php if ($isUsia567): ?>
+                        <div class="fed-instansi-title">
+                            KEJUARAAN ATLETIK USIA DINI 567 TAHUN
+                        </div>
+                        <div class="fed-instansi-prov" style="letter-spacing: 2px;">
+                            TAHUN <?= esc($item['tahun'] ?? '2026') ?>
+                        </div>
+                        <div class="fed-event-sub">
+                            TINGKAT KOTA PEKALONGAN, KAB. PEKALONGAN, DAN KAB. BATANG
+                        </div>
+                    <?php else: ?>
+                        <div class="fed-instansi-title">
+                            PENGURUS PROVINSI PERSATUAN ATLETIK SELURUH INDONESIA
+                        </div>
+                        <div class="fed-instansi-prov">
+                            JAWA TENGAH
+                        </div>
+                        <div class="fed-event-sub">
+                            <?= esc($template['sub_header'] ?: 'KEJUARAAN ATLETIK KELOMPOK UMUR TINGKAT EKS-KARESIDENAN PEKALONGAN TAHUN ' . ($item['tahun'] ?? date('Y'))) ?>
+                        </div>
+                    <?php endif; ?>
                     
                     <div class="fed-divider-ornament">
                         <span class="line"></span>
@@ -3833,7 +3940,7 @@ PLT PASI Jateng")) ?></div>
                     </div>
 
                     <p class="fed-closing-text">
-                        <?= esc($template['kalimat_penghargaan'] ? str_replace(['{tanggal}', '{tempat}'], [$item['tanggal'], $item['tempat']], $template['kalimat_penghargaan']) : 'dalam Kejuaraan Atletik Kelompok Umur Tingkat Eks Karesidenan Pekalongan yang diselenggarakan pada tanggal ' . esc($item['tanggal']) . ' di ' . esc($item['tempat']) . '.') ?>
+                        <?= esc($displayKalimatPenutup) ?>
                     </p>
                 </div>
 
