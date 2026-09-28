@@ -2498,15 +2498,31 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
             $usiaSpecific = '7';
         }
 
+        if ($usiaSpecific === '5') {
+            $usiaLabelHeader = "USIA DINI 5TH";
+            $usiaLabelPenutup = "Usia Dini 5th";
+        } elseif ($usiaSpecific === '6') {
+            $usiaLabelHeader = "USIA DINI 6TH";
+            $usiaLabelPenutup = "Usia Dini 6th";
+        } elseif ($usiaSpecific === '7') {
+            $usiaLabelHeader = "USIA DINI 7TH";
+            $usiaLabelPenutup = "Usia Dini 7th";
+        } else {
+            $usiaLabelHeader = "USIA DINI 5,6,7TH";
+            $usiaLabelPenutup = "Usia Dini 5,6,7th";
+        }
+
         $displayHeaderLines = [
-            "KEJUARAAN ATLETIK USIA DINI " . ($usiaSpecific === '567' ? '567' : $usiaSpecific) . " TAHUN",
+            "KEJUARAAN",
+            "ATLETIK",
+            $usiaLabelHeader,
             "TAHUN " . ($item['tahun'] ?? '2026')
         ];
         $cleanNomor = formatNomorPiagam567($cleanNomor, $idx);
         $displayKalimatPembuka = "Pengurus Kota Persatuan Atletik Seluruh Indonesia (PASI) Kota Pekalongan dengan ini memberikan Piagam Penghargaan kepada :";
         $displayNomorLomba = formatNomorLomba567($item['nomor_lomba'] ?? '');
         $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba);
-        $displayKalimatPenutup = "dalam Kejuaraan Atletik KU " . ($usiaSpecific === '567' ? '567' : $usiaSpecific) . " Tahun Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
+        $displayKalimatPenutup = "dalam Kejuaraan Atletik {$usiaLabelPenutup} Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
     } else {
         $displayHeaderLines = explode("\n", trim($template['instansi_header'] ?: "PENGURUS PROVINSI PERSATUAN ATLETIK\nSELURUH INDONESIA\nJAWA TENGAH"));
         $displayKalimatPembuka = $template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :';
@@ -3937,7 +3953,7 @@ PLT PASI Jateng")) ?></div>
                     </div>
                     <?php if ($isUsia567): ?>
                         <div class="fed-instansi-title">
-                            KEJUARAAN ATLETIK USIA DINI 567 TAHUN
+                            KEJUARAAN<br>ATLETIK<br><?= esc($usiaLabelHeader) ?>
                         </div>
                         <div class="fed-instansi-prov" style="letter-spacing: 2px;">
                             TAHUN <?= esc($item['tahun'] ?? '2026') ?>
