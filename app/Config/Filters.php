@@ -58,7 +58,6 @@ class Filters extends BaseFilters
         'after' => [
             'pagecache',   // Web Page Caching
             'performance', // Performance Metrics
-            'toolbar',     // Debug Toolbar
         ],
     ];
 
@@ -89,6 +88,18 @@ class Filters extends BaseFilters
             // 'invalidchars',
         ],
         'after' => [
+            'toolbar' => [
+                'except' => [
+                    '*/cetak*',
+                    'piagam/*',
+                    'buku_acara/*',
+                    'bukuacara/*',
+                    'buku-acara/*',
+                    'hasil/cetak*',
+                    'atlet/cetak*',
+                    'verifikasi/*',
+                ],
+            ],
             // 'honeypot',
             // 'secureheaders',
         ],

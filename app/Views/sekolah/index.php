@@ -23,7 +23,6 @@
                         <th>Nama Sekolah</th>
                         <th>Jenjang</th>
                         <th>Kontak & Telepon</th>
-                        <th>Alamat</th>
                         <th class="text-center">Total Atlet</th>
                         <th class="text-center" width="120">Aksi</th>
                     </tr>
@@ -47,7 +46,6 @@
                                 <div><?= esc($s['kontak_person'] ?: '-') ?></div>
                                 <small class="text-muted"><?= esc($s['no_telepon'] ?: '') ?></small>
                             </td>
-                            <td><small class="text-muted"><?= esc($s['alamat'] ?: '-') ?></small></td>
                             <td class="text-center">
                                 <span class="badge badge-blue"><?= $s['total_atlet'] ?> Atlet</span>
                             </td>

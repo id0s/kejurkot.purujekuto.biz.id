@@ -604,7 +604,19 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                     <td class="text-center"><?= esc($p2 ?: '-') ?></td>
                                                     <td class="text-center"><?= esc($p3 ?: '-') ?></td>
                                                     <td class="text-center">
-                                                        <?php if (!empty($p['prestasi'])): ?>
+                                                        <?php 
+                                                        $stUpper = strtoupper($p['status_prestasi'] ?? '');
+                                                        $prUpper = strtoupper(trim($p['prestasi'] ?? ''));
+                                                        ?>
+                                                        <?php if ($stUpper === 'DQ' || in_array($prUpper, ['DQ', 'DISK', 'DISQ'])): ?>
+                                                            <span class="badge bg-danger text-white fw-bold fs-6">DQ (DISK)</span>
+                                                        <?php elseif ($stUpper === 'NM' || $prUpper === 'NM'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold fs-6">NM (Gagal)</span>
+                                                        <?php elseif ($stUpper === 'DNS' || $prUpper === 'DNS'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold fs-6">DNS</span>
+                                                        <?php elseif ($stUpper === 'DNF' || $prUpper === 'DNF'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold fs-6">DNF</span>
+                                                        <?php elseif (!empty($p['prestasi'])): ?>
                                                             <span class="badge badge-emerald fw-bold fs-6"><?= esc($p['prestasi']) ?></span>
                                                         <?php else: ?>
                                                             <span class="text-muted">-</span>
@@ -612,7 +624,17 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                     </td>
                                                 <?php else: ?>
                                                     <td class="text-center">
-                                                        <?php if (!empty($p['prestasi'])): ?>
+                                                        <?php 
+                                                        $stUpper = strtoupper($p['status_prestasi'] ?? '');
+                                                        $prUpper = strtoupper(trim($p['prestasi'] ?? ''));
+                                                        ?>
+                                                        <?php if ($stUpper === 'DQ' || in_array($prUpper, ['DQ', 'DISK', 'DISQ'])): ?>
+                                                            <span class="badge bg-danger text-white fw-bold fs-6">DQ (DISK)</span>
+                                                        <?php elseif ($stUpper === 'DNS' || $prUpper === 'DNS'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold fs-6">DNS</span>
+                                                        <?php elseif ($stUpper === 'DNF' || $prUpper === 'DNF'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold fs-6">DNF</span>
+                                                        <?php elseif (!empty($p['prestasi'])): ?>
                                                             <span class="badge badge-emerald fw-bold fs-6"><?= esc($p['prestasi']) ?></span>
                                                         <?php else: ?>
                                                             <span class="text-muted">-</span>
@@ -620,10 +642,19 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                     </td>
                                                 <?php endif; ?>
                                                 <td class="text-center">
+                                                    <?php 
+                                                    $stUpper = strtoupper($p['status_prestasi'] ?? '');
+                                                    ?>
                                                     <?php if (!empty($p['peringkat'])): ?>
                                                         <span class="badge badge-emerald fw-bold">
                                                             Juara <?= $p['peringkat'] ?> <?= !empty($p['medali']) && $p['medali'] !== 'None' ? '(' . $p['medali'] . ')' : '' ?>
                                                         </span>
+                                                    <?php elseif ($stUpper === 'DQ' || in_array(strtoupper(trim($p['prestasi'] ?? '')), ['DQ', 'DISK', 'DISQ'])): ?>
+                                                        <span class="badge bg-danger text-white fw-bold">Diskualifikasi</span>
+                                                    <?php elseif ($stUpper === 'NM' || strtoupper(trim($p['prestasi'] ?? '')) === 'NM'): ?>
+                                                        <span class="badge bg-secondary text-white fw-bold">No Mark (Foul)</span>
+                                                    <?php elseif ($stUpper === 'DNS' || strtoupper(trim($p['prestasi'] ?? '')) === 'DNS'): ?>
+                                                        <span class="badge bg-secondary text-white fw-bold">Tidak Hadir (DNS)</span>
                                                     <?php elseif (!empty($p['ket_hasil'])): ?>
                                                         <span class="badge badge-amber"><?= esc($p['ket_hasil']) ?></span>
                                                     <?php else: ?>
@@ -714,7 +745,19 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                         <td class="text-center"><?= esc($p2 ?: '-') ?></td>
                                                         <td class="text-center"><?= esc($p3 ?: '-') ?></td>
                                                         <td class="text-center">
-                                                            <?php if (!empty($p['prestasi'])): ?>
+                                                            <?php 
+                                                            $stUpper = strtoupper($p['status_prestasi'] ?? '');
+                                                            $prUpper = strtoupper(trim($p['prestasi'] ?? ''));
+                                                            ?>
+                                                            <?php if ($stUpper === 'DQ' || in_array($prUpper, ['DQ', 'DISK', 'DISQ'])): ?>
+                                                                <span class="badge bg-danger text-white fw-bold fs-6">DQ (DISK)</span>
+                                                            <?php elseif ($stUpper === 'NM' || $prUpper === 'NM'): ?>
+                                                                <span class="badge bg-secondary text-white fw-bold fs-6">NM (Gagal)</span>
+                                                            <?php elseif ($stUpper === 'DNS' || $prUpper === 'DNS'): ?>
+                                                                <span class="badge bg-secondary text-white fw-bold fs-6">DNS</span>
+                                                            <?php elseif ($stUpper === 'DNF' || $prUpper === 'DNF'): ?>
+                                                                <span class="badge bg-secondary text-white fw-bold fs-6">DNF</span>
+                                                            <?php elseif (!empty($p['prestasi'])): ?>
                                                                 <span class="badge badge-emerald fw-bold fs-6"><?= esc($p['prestasi']) ?></span>
                                                             <?php else: ?>
                                                                 <span class="text-muted">-</span>
@@ -722,7 +765,17 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                         </td>
                                                     <?php else: ?>
                                                         <td class="text-center">
-                                                            <?php if (!empty($p['prestasi'])): ?>
+                                                            <?php 
+                                                            $stUpper = strtoupper($p['status_prestasi'] ?? '');
+                                                            $prUpper = strtoupper(trim($p['prestasi'] ?? ''));
+                                                            ?>
+                                                            <?php if ($stUpper === 'DQ' || in_array($prUpper, ['DQ', 'DISK', 'DISQ'])): ?>
+                                                                <span class="badge bg-danger text-white fw-bold fs-6">DQ (DISK)</span>
+                                                            <?php elseif ($stUpper === 'DNS' || $prUpper === 'DNS'): ?>
+                                                                <span class="badge bg-secondary text-white fw-bold fs-6">DNS</span>
+                                                            <?php elseif ($stUpper === 'DNF' || $prUpper === 'DNF'): ?>
+                                                                <span class="badge bg-secondary text-white fw-bold fs-6">DNF</span>
+                                                            <?php elseif (!empty($p['prestasi'])): ?>
                                                                 <span class="badge badge-emerald fw-bold fs-6"><?= esc($p['prestasi']) ?></span>
                                                             <?php else: ?>
                                                                 <span class="text-muted">-</span>
@@ -730,7 +783,20 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                         </td>
                                                     <?php endif; ?>
                                                     <td class="text-center">
-                                                        <?php if (!empty($p['ket_hasil'])): ?>
+                                                        <?php 
+                                                        $stUpper = strtoupper($p['status_prestasi'] ?? '');
+                                                        ?>
+                                                        <?php if (!empty($p['peringkat'])): ?>
+                                                            <span class="badge badge-emerald fw-bold">
+                                                                Juara <?= $p['peringkat'] ?> <?= !empty($p['medali']) && $p['medali'] !== 'None' ? '(' . $p['medali'] . ')' : '' ?>
+                                                            </span>
+                                                        <?php elseif ($stUpper === 'DQ' || in_array(strtoupper(trim($p['prestasi'] ?? '')), ['DQ', 'DISK', 'DISQ'])): ?>
+                                                            <span class="badge bg-danger text-white fw-bold">Diskualifikasi</span>
+                                                        <?php elseif ($stUpper === 'NM' || strtoupper(trim($p['prestasi'] ?? '')) === 'NM'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold">No Mark (Foul)</span>
+                                                        <?php elseif ($stUpper === 'DNS' || strtoupper(trim($p['prestasi'] ?? '')) === 'DNS'): ?>
+                                                            <span class="badge bg-secondary text-white fw-bold">Tidak Hadir (DNS)</span>
+                                                        <?php elseif (!empty($p['ket_hasil'])): ?>
                                                             <span class="badge badge-amber"><?= esc($p['ket_hasil']) ?></span>
                                                         <?php else: ?>
                                                             <span class="text-muted">-</span>

@@ -41,7 +41,7 @@ class HasilModel extends Model
 
         $clean = trim($prestasi);
         // Tangani status khusus
-        if (in_array(strtoupper($clean), ['DNS', 'DNF', 'DQ', 'NM', 'DISH', '-'])) {
+        if (in_array(strtoupper($clean), ['DNS', 'DNF', 'DQ', 'NM', 'DISH', 'DISQ', 'DISK', '-'])) {
             return null;
         }
 
@@ -101,13 +101,23 @@ class HasilModel extends Model
 
         $satuan = $event['satuan_hasil'] ?? 'Waktu';
 
-        // Ambil semua hasil pada event ini yang memiliki nilai_angka valid
+        // Bersihkan peringkat & medali bagi atlet yang statusnya DQ/DNS/DNF/NM atau nilai angka <= 0
+        $this->db->query("
+            UPDATE hasil h
+            INNER JOIN peserta_event pe ON pe.id = h.peserta_event_id
+            SET h.peringkat = NULL, h.medali = 'None'
+            WHERE pe.event_id = ? 
+              AND (h.status_prestasi != 'Valid' OR h.nilai_angka IS NULL OR h.nilai_angka <= 0)
+        ", [(int)$eventId]);
+
+        // Ambil semua hasil pada event ini yang memiliki nilai_angka valid (> 0)
         $builder = $this->db->table('hasil h')
             ->select('h.id, h.nilai_angka, h.prestasi, h.status_prestasi')
             ->join('peserta_event pe', 'pe.id = h.peserta_event_id')
             ->where('pe.event_id', $eventId)
             ->where('h.status_prestasi', 'Valid')
-            ->where('h.nilai_angka IS NOT NULL');
+            ->where('h.nilai_angka IS NOT NULL')
+            ->where('h.nilai_angka >', 0);
 
         // Jika waktu: semakin kecil semakin cepat (ASC). Jika jarak/poin: semakin besar semakin jauh (DESC)
         if ($satuan === 'Waktu') {

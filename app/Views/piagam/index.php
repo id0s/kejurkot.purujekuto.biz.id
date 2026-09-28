@@ -155,7 +155,6 @@
                                     <th style="width: 100px;">Peringkat</th>
                                     <th>Nama Atlet / Pemenang</th>
                                     <th>Asal Sekolah / Kontingen</th>
-                                    <th>Asal Daerah</th>
                                     <th style="width: 120px;">Prestasi</th>
                                     <th style="width: 180px;" class="text-end">Aksi Penyesuaian</th>
                                 </tr>
@@ -192,16 +191,17 @@
                                             <div class="text-muted" style="font-size: 11px;">
                                                 No. Dada: <?= esc($w['nomor_dada'] ?: '-') ?> &bull; Seri <?= esc($w['seri'] ?: 1) ?> / Lintasan <?= esc($w['no_lintasan'] ?: '-') ?>
                                             </div>
+                                            <?php if (!empty($w['catatan_atlet'])): ?>
+                                                <div class="text-primary small mt-1" style="font-size: 11.5px; line-height: 1.3;">
+                                                    <i class="bi bi-people-fill me-1"></i><strong class="text-dark">Pelari:</strong> <?= esc(preg_replace('/^[Pp]elari\s*:\s*/i', '', $w['catatan_atlet'])) ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <?= esc($w['nama_sekolah'] ?: 'Independen') ?>
                                         </td>
                                         <td>
-                                            <span class="badge bg-light text-dark border"><?= esc($w['asal_daerah'] ?: 'Kota Pekalongan') ?></span>
-                                        </td>
-                                        <td>
-                                            <strong class="text-primary font-monospace fs-6"><?= esc($w['prestasi']) ?></strong>
-                                            <small class="text-muted"><?= esc($w['satuan_hasil']) ?></small>
+                                            <strong class="text-primary font-monospace fs-6"><?= esc(formatPrestasiPiagam($w['prestasi'], $ev['nama_acara'])) ?></strong>
                                         </td>
                                         <td class="text-end">
                                             <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 btn-customize"
@@ -210,7 +210,7 @@
                                                 data-kota="<?= esc($w['asal_daerah'] ?: 'Kota Pekalongan') ?>"
                                                 data-lomba="<?= esc($ev['nama_acara']) ?>"
                                                 data-peringkat="<?= $p ?>"
-                                                data-prestasi="<?= esc($w['prestasi']) ?>"
+                                                data-prestasi="<?= esc(formatPrestasiPiagam($w['prestasi'], $ev['nama_acara'])) ?>"
                                                 data-kejuaraan="<?= esc($activeKejuaraan['nama'] ?? 'KEJURWIL ATLETIK KOTA PEKALONGAN 2026') ?>"
                                                 data-tempat="<?= esc($activeKejuaraan['tempat'] ?? 'Stadion Hoegeng Kota Pekalongan') ?>"
                                                 data-tanggal="29 Agustus 2026">
@@ -291,15 +291,8 @@
                             </select>
                         </div>
 
-                        <!-- Asal Sekolah & Asal Kota -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small text-dark">Asal Sekolah / Kontingen</label>
-                            <input type="text" name="asal_sekolah" id="custom_asal_sekolah" class="form-control" placeholder="Contoh: SMP NEGERI 1 PEKALONGAN">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold small text-dark">Asal Kabupaten / Kota</label>
-                            <input type="text" name="asal_kota" id="custom_asal_kota" class="form-control" value="Kota Pekalongan" placeholder="Contoh: Kota Pekalongan">
-                        </div>
+                        <input type="hidden" name="asal_sekolah" id="custom_asal_sekolah" value="">
+                        <input type="hidden" name="asal_kota" id="custom_asal_kota" value="">
 
                         <!-- Mata Lomba & Prestasi -->
                         <div class="col-md-8">

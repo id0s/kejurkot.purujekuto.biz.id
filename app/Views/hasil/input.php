@@ -345,12 +345,12 @@
                                     <?php endif; ?>
 
                                     <td class="align-middle">
-                                        <select name="hasil[<?= $p['id'] ?>][status_prestasi]" class="form-select form-select-sm">
+                                        <select name="hasil[<?= $p['id'] ?>][status_prestasi]" class="form-select form-select-sm status-select">
                                             <option value="Valid" <?= ($p['status_prestasi'] ?? 'Valid') === 'Valid' ? 'selected' : '' ?>>Valid</option>
                                             <option value="DNS" <?= ($p['status_prestasi'] ?? '') === 'DNS' ? 'selected' : '' ?>>DNS</option>
                                             <option value="DNF" <?= ($p['status_prestasi'] ?? '') === 'DNF' ? 'selected' : '' ?>>DNF</option>
-                                            <option value="DQ" <?= ($p['status_prestasi'] ?? '') === 'DQ' ? 'selected' : '' ?>>DQ</option>
-                                            <option value="NM" <?= ($p['status_prestasi'] ?? '') === 'NM' ? 'selected' : '' ?>>NM (Foul/Gagal)</option>
+                                            <option value="DQ" <?= ($p['status_prestasi'] ?? '') === 'DQ' ? 'selected' : '' ?>>DQ / DISK (Diskualifikasi)</option>
+                                            <option value="NM" <?= ($p['status_prestasi'] ?? '') === 'NM' ? 'selected' : '' ?>>NM / 0 (Foul / Gagal)</option>
                                         </select>
                                     </td>
                                     <td class="align-middle text-center p-1">
@@ -445,9 +445,9 @@
     text-transform: uppercase;
 }
 .scroll-drum-col {
+    position: relative;
     height: 160px;
     overflow-y: scroll;
-    scroll-behavior: smooth;
     text-align: center;
     scrollbar-width: thin;
     scrollbar-color: #334155 transparent;
@@ -579,12 +579,27 @@
 <?= $this->section('scripts') ?>
 <script>
 $(document).ready(function () {
-    // 1. Live Auto-Calculate untuk Nomor Lapangan (P1, P2, P3)
+    // 1. Live Auto-Calculate untuk Nomor Lapangan (P1, P2, P3) & Penanganan DISK/0/-
     $('.trial-input').on('input', function () {
         const row = $(this).closest('tr');
-        const p1 = row.find('.trial-p1').val().trim().replace(',', '.');
-        const p2 = row.find('.trial-p2').val().trim().replace(',', '.');
-        const p3 = row.find('.trial-p3').val().trim().replace(',', '.');
+        const p1Raw = row.find('.trial-p1').val().trim();
+        const p2Raw = row.find('.trial-p2').val().trim();
+        const p3Raw = row.find('.trial-p3').val().trim();
+
+        const p1 = p1Raw.replace(',', '.');
+        const p2 = p2Raw.replace(',', '.');
+        const p3 = p3Raw.replace(',', '.');
+
+        const allRaw = [p1Raw.toUpperCase(), p2Raw.toUpperCase(), p3Raw.toUpperCase()];
+        const statusSelect = row.find('.status-select');
+        const bestInput = row.find('.best-trial-input');
+
+        // Jika salah satu percobaan bertuliskan DISK, DISQ, atau DQ
+        if (allRaw.some(v => ['DISK', 'DISQ', 'DQ'].includes(v))) {
+            statusSelect.val('DQ');
+            bestInput.val('DQ');
+            return;
+        }
 
         let maxVal = null;
         [p1, p2, p3].forEach(function (v) {
@@ -596,15 +611,66 @@ $(document).ready(function () {
             }
         });
 
-        const bestInput = row.find('.best-trial-input');
         if (maxVal !== null) {
             bestInput.val(maxVal.toFixed(2));
-        } else if (p1.toUpperCase() === 'X' && p2.toUpperCase() === 'X' && p3.toUpperCase() === 'X') {
-            bestInput.val('NM');
+            if (statusSelect.val() === 'DQ' || statusSelect.val() === 'NM') {
+                statusSelect.val('Valid');
+            }
+        } else if (allRaw.some(v => v !== '' && v !== '-')) {
+            // Jika ada input tapi tidak ada nilai > 0 (misal diisi X, 0, NM)
+            if (allRaw.every(v => v === '0' || v === '0.00' || v === '0.0')) {
+                bestInput.val('0.00');
+            } else {
+                statusSelect.val('NM');
+                bestInput.val('NM');
+            }
+        } else if (allRaw.every(v => v === '-')) {
+            bestInput.val('-');
         }
     });
 
-    // 2. Interactive Floating Scroll Time Picker Handler (Format M:SS.xx -> misal 5:07.74)
+    // 1b. Deteksi Cepat jika pengguna mengetik DISK, DQ, NM, 0, atau - pada kolom Prestasi Terbaik Langsung
+    $(document).on('input change', '.best-trial-input, input[name*="[prestasi]"]', function () {
+        const row = $(this).closest('tr');
+        const val = $(this).val().trim().toUpperCase();
+        const statusSelect = row.find('.status-select');
+
+        if (['DISK', 'DISQ', 'DQ'].includes(val)) {
+            statusSelect.val('DQ');
+            $(this).val('DQ');
+        } else if (['NM', 'X'].includes(val)) {
+            statusSelect.val('NM');
+            $(this).val('NM');
+        } else if (val === 'DNS') {
+            statusSelect.val('DNS');
+        } else if (val === 'DNF') {
+            statusSelect.val('DNF');
+        } else if (val === '0' || val === '0.0' || val === '0.00') {
+            $(this).val('0.00');
+        }
+    });
+
+    // 1c. Sinkronisasi Otomatis ketika Dropdown Status Prestasi Diubah Manual
+    $(document).on('change', '.status-select', function () {
+        const row = $(this).closest('tr');
+        const status = $(this).val();
+        const bestInput = row.find('.best-trial-input');
+
+        if (status === 'DQ') {
+            bestInput.val('DQ');
+        } else if (status === 'NM') {
+            bestInput.val('NM');
+        } else if (status === 'DNS') {
+            bestInput.val('DNS');
+        } else if (status === 'DNF') {
+            bestInput.val('DNF');
+        } else if (status === 'Valid' && ['DQ', 'NM', 'DNS', 'DNF'].includes(bestInput.val().trim().toUpperCase())) {
+            bestInput.val('');
+        }
+    });
+
+    // 2. Interactive Floating Scroll Time Picker Handler (Format M:SS.xx -> misal 5:07.74 atau 3:54.00)
+    const isDistanceRace = <?= (in_array((int)($event['nomor_lomba_id'] ?? 0), [8, 9, 10, 11]) || preg_match('/(800|1000|1500|3000|5000)\s*m/i', $event['nama_acara'] ?? '')) ? 'true' : 'false' ?>;
     let activeInput = null;
     let currentMin = '00';
     let currentSec = '00';
@@ -619,7 +685,7 @@ $(document).ready(function () {
         val = val.trim();
 
         if (val.includes(':')) {
-            // Misal 5:07.74 atau 5:07
+            // Misal 5:07.74 atau 5:07 atau 3:54
             const parts = val.split(':');
             m = parseInt(parts[0], 10) || 0;
             const right = parts[1] || '';
@@ -632,7 +698,7 @@ $(document).ready(function () {
                 ms = 0;
             }
         } else if (val.includes('.') || val.includes(',')) {
-            // Misal 5.07.74 atau 59.42
+            // Misal 3.54 atau 3,54 atau 5.07.74 atau 59.42
             const parts = val.split(/[.,]/);
             if (parts.length >= 3) {
                 m = parseInt(parts[0], 10) || 0;
@@ -640,21 +706,31 @@ $(document).ready(function () {
                 ms = parseInt(parts[2].padEnd(2, '0').substring(0, 2), 10) || 0;
             } else if (parts.length === 2) {
                 const p0 = parseInt(parts[0], 10) || 0;
-                const p1 = parseInt(parts[1].padEnd(2, '0').substring(0, 2), 10) || 0;
-                if (p0 >= 60) {
+                const p1 = parseInt(parts[1], 10) || 0;
+                // Jika lomba lari jarak menengah/jauh (>= 800m), input seperti "3.54" atau "3,54" berarti 3 MENIT 54 DETIK!
+                if (isDistanceRace && p0 < 60 && p1 < 60) {
+                    m = p0;
+                    s = p1;
+                    ms = 0;
+                } else if (p0 >= 60) {
                     m = Math.floor(p0 / 60);
                     s = p0 % 60;
-                    ms = p1;
+                    ms = parseInt(parts[1].padEnd(2, '0').substring(0, 2), 10) || 0;
                 } else {
                     m = 0;
                     s = p0;
-                    ms = p1;
+                    ms = parseInt(parts[1].padEnd(2, '0').substring(0, 2), 10) || 0;
                 }
             }
         } else {
-            // Hanya digit angka: misal 50774 atau 1174 atau 59
+            // Hanya digit angka: misal 354 atau 50774
             const digits = val.replace(/\D/g, '');
-            if (digits.length >= 5) {
+            if (isDistanceRace && (digits.length === 3 || digits.length === 4)) {
+                // Misal pada 1000m: 354 -> 3 menit 54 detik, 412 -> 4 menit 12 detik
+                s = parseInt(digits.slice(-2), 10) || 0;
+                m = parseInt(digits.slice(0, -2), 10) || 0;
+                ms = 0;
+            } else if (digits.length >= 5) {
                 // misal 50774 -> m: 5, s: 07, ms: 74
                 ms = parseInt(digits.slice(-2), 10) || 0;
                 s  = parseInt(digits.slice(-4, -2), 10) || 0;
@@ -698,16 +774,19 @@ $(document).ready(function () {
     }
 
     function scrollToVal(colEl, val) {
-        const item = colEl.find(`.scroll-drum-item[data-val="${val}"]`);
-        if (item.length > 0) {
-            colEl.find('.scroll-drum-item').removeClass('active');
-            item.addClass('active');
-            const targetScroll = item.position().top + colEl.scrollTop() - (colEl.height() / 2) + (item.height() / 2);
-            isScrollUpdating = true;
-            colEl.stop().animate({ scrollTop: targetScroll }, 180, function () {
-                setTimeout(() => { isScrollUpdating = false; }, 50);
-            });
-        }
+        const intVal = parseInt(val, 10) || 0;
+        const maxIdx = colEl.find('.scroll-drum-item').length - 1;
+        const clamped = Math.max(0, Math.min(maxIdx, intVal));
+        const valStr = String(clamped).padStart(2, '0');
+        const targetScroll = clamped * 32;
+
+        colEl.find('.scroll-drum-item').removeClass('active');
+        colEl.find(`.scroll-drum-item[data-val="${valStr}"]`).addClass('active');
+
+        isScrollUpdating = true;
+        colEl.stop().animate({ scrollTop: targetScroll }, 100, function () {
+            setTimeout(() => { isScrollUpdating = false; }, 30);
+        });
     }
 
     function updateLivePreview(syncInput = true) {
@@ -796,44 +875,35 @@ $(document).ready(function () {
         }
 
         scrollToVal(col, val);
-        updateLivePreview();
+        updateLivePreview(true);
     });
 
-    // Detect scroll stopped to snap to closest item
+    // Detect scroll stopped to snap to closest item (Math.round(scrollTop / 32))
     $('.scroll-drum-col').on('scroll', function () {
         if (isScrollUpdating) return;
         const col = $(this);
         clearTimeout(col.data('scrollTimer'));
         col.data('scrollTimer', setTimeout(function () {
-            const centerY = col.scrollTop() + (col.height() / 2);
-            let closestItem = null;
-            let closestDist = Infinity;
+            if (isScrollUpdating) return;
+            const maxIdx = col.find('.scroll-drum-item').length - 1;
+            const idx = Math.max(0, Math.min(maxIdx, Math.round(col.scrollTop() / 32)));
+            const valStr = String(idx).padStart(2, '0');
 
-            col.find('.scroll-drum-item').each(function () {
-                const item = $(this);
-                const itemCenter = item.position().top + col.scrollTop() + (item.height() / 2);
-                const dist = Math.abs(itemCenter - centerY);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closestItem = item;
-                }
-            });
+            col.find('.scroll-drum-item').removeClass('active');
+            col.find(`.scroll-drum-item[data-val="${valStr}"]`).addClass('active');
 
-            if (closestItem && closestDist < 30) {
-                const val = closestItem.data('val');
-                col.find('.scroll-drum-item').removeClass('active');
-                closestItem.addClass('active');
-
-                if (col.is('#tspColMin')) {
-                    currentMin = String(val).padStart(2, '0');
-                } else if (col.is('#tspColSec')) {
-                    currentSec = String(val).padStart(2, '0');
-                } else if (col.is('#tspColMs')) {
-                    currentMs = String(val).padStart(2, '0');
-                }
-                updateLivePreview();
+            if (col.is('#tspColMin')) {
+                currentMin = valStr;
+            } else if (col.is('#tspColSec')) {
+                currentSec = valStr;
+            } else if (col.is('#tspColMs')) {
+                currentMs = valStr;
             }
-        }, 120));
+
+            // Jangan overwrite teks jika pengguna sedang mengetik langsung di input
+            const isTyping = activeInput && activeInput.is(':focus');
+            updateLivePreview(!isTyping);
+        }, 80));
     });
 
     // Quick Ratusan Preset Buttons (.00, .25, .50, .75)
@@ -841,7 +911,7 @@ $(document).ready(function () {
         const msVal = String($(this).data('ms')).padStart(2, '0');
         currentMs = msVal;
         scrollToVal($('#tspColMs'), currentMs);
-        updateLivePreview();
+        updateLivePreview(true);
     });
 
     // Steppers (+ / -)
@@ -866,7 +936,7 @@ $(document).ready(function () {
         scrollToVal($('#tspColMin'), currentMin);
         scrollToVal($('#tspColSec'), currentSec);
         scrollToVal($('#tspColMs'), currentMs);
-        updateLivePreview();
+        updateLivePreview(true);
     });
 
     // Typing directly into time input field

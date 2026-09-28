@@ -33,6 +33,11 @@ class Hasil extends BaseController
     {
         $event = $this->eventModel->getEventWithDetails($eventId);
         if (!$event) {
+            $kejuaraanId = $this->activeKejuaraan['id'] ?? 1;
+            $evByNo = $this->eventModel->where('kejuaraan_id', $kejuaraanId)->where('nomor_acara', $eventId)->first();
+            if ($evByNo) {
+                return redirect()->to(base_url('hasil/input/' . $evByNo['id']));
+            }
             return redirect()->to(base_url('hasil'))->with('error', 'Acara perlombaan tidak ditemukan.');
         }
 
@@ -105,32 +110,84 @@ class Hasil extends BaseController
             $status   = $row['status_prestasi'] ?? 'Valid';
             $prestasi = trim($row['prestasi'] ?? '');
 
-            // Jika nomor lapangan (Tolak Peluru / Lompat Jauh / Lempar Lembing), cek 3 percobaan
+            // Normalisasi input status khusus pada kolom prestasi
+            $upperPres = strtoupper($prestasi);
+            if (in_array($upperPres, ['DISK', 'DISQ', 'DQ'])) {
+                $status   = 'DQ';
+                $prestasi = 'DQ';
+            } elseif (in_array($upperPres, ['NM', 'X'])) {
+                $status   = 'NM';
+                $prestasi = 'NM';
+            } elseif ($upperPres === 'DNS') {
+                $status   = 'DNS';
+                $prestasi = 'DNS';
+            } elseif ($upperPres === 'DNF') {
+                $status   = 'DNF';
+                $prestasi = 'DNF';
+            } elseif ($prestasi === '0' || $prestasi === '0.0' || $prestasi === '0.00') {
+                $prestasi = '0.00';
+            } elseif ($prestasi === '-') {
+                $prestasi = '-';
+            }
+
+            // Jika status terpilih DQ/DNS/DNF/NM tapi prestasi kosong, sinkronkan
+            if ($status !== 'Valid' && empty($prestasi)) {
+                $prestasi = $status;
+            }
+
+            // Normalisasi format waktu jika user memasukkan koma atau format desimal (misal 3,54 atau 3.54 pada nomor lari jarak menengah)
+            if (!$isField && !empty($prestasi) && !in_array($status, ['DQ', 'NM', 'DNS', 'DNF', '-'])) {
+                $prestasiClean = str_replace(',', '.', $prestasi);
+                if (strpos($prestasiClean, ':') === false && is_numeric($prestasiClean)) {
+                    $parts = explode('.', $prestasiClean);
+                    if (count($parts) === 2) {
+                        $isMiddleLong = in_array((int)($event['nomor_lomba_id'] ?? 0), [8, 9, 10, 11]) || preg_match('/(800|1000|1500|3000|5000)\s*m/i', $event['nama_acara'] ?? '');
+                        if ($isMiddleLong && (int)$parts[0] < 60 && (int)$parts[1] < 60) {
+                            $prestasi = sprintf('%d:%02d.00', (int)$parts[0], (int)$parts[1]);
+                        }
+                    }
+                }
+            }
+
+            // Jika nomor lapangan (Tolak Peluru / Lompat Jauh / Lempar Lembing / Cakram), periksa 3 percobaan
             $p1 = trim($row['p1'] ?? '');
             $p2 = trim($row['p2'] ?? '');
             $p3 = trim($row['p3'] ?? '');
 
             if ($isField && ($p1 !== '' || $p2 !== '' || $p3 !== '')) {
-                // Cari lemparan / lompatan yang paling jauh (nilai maksimum) dari 3 percobaan
-                $bestVal = null;
-                $bestStr = '';
+                $trials = [strtoupper($p1), strtoupper($p2), strtoupper($p3)];
 
-                foreach ([$p1, $p2, $p3] as $tVal) {
-                    $cleaned = str_replace(',', '.', trim($tVal));
-                    if (is_numeric($cleaned)) {
-                        $num = (float)$cleaned;
-                        if ($bestVal === null || $num > $bestVal) {
-                            $bestVal = $num;
-                            $bestStr = number_format($num, 2, '.', '');
+                // Jika ada percobaan yang bertuliskan DISK/DISQ/DQ
+                if (in_array('DISK', $trials) || in_array('DISQ', $trials) || in_array('DQ', $trials)) {
+                    $status   = 'DQ';
+                    $prestasi = 'DQ';
+                } else {
+                    // Cari lemparan / lompatan yang paling jauh (nilai maksimum) dari 3 percobaan
+                    $bestVal = null;
+                    $bestStr = '';
+
+                    foreach ([$p1, $p2, $p3] as $tVal) {
+                        $cleaned = str_replace(',', '.', trim($tVal));
+                        if (is_numeric($cleaned)) {
+                            $num = (float)$cleaned;
+                            if ($bestVal === null || $num > $bestVal) {
+                                $bestVal = $num;
+                                $bestStr = number_format($num, 2, '.', '');
+                            }
                         }
                     }
-                }
 
-                if ($bestVal !== null) {
-                    $prestasi = $bestStr;
-                } elseif (strtoupper($p1) === 'X' && strtoupper($p2) === 'X' && strtoupper($p3) === 'X') {
-                    $status   = 'NM'; // No Mark (semua foul/gagal)
-                    $prestasi = 'NM';
+                    if ($bestVal !== null) {
+                        $prestasi = $bestStr;
+                        if ($bestVal <= 0 && $status === 'Valid') {
+                            $prestasi = '0.00';
+                        }
+                    } elseif (in_array('X', $trials) || in_array('NM', $trials)) {
+                        $status   = 'NM'; // No Mark (semua foul/gagal)
+                        $prestasi = 'NM';
+                    } elseif ($p1 === '-' && $p2 === '-' && $p3 === '-') {
+                        $prestasi = '-';
+                    }
                 }
 
                 $ket = "P1: " . ($p1 ?: '-') . " | P2: " . ($p2 ?: '-') . " | P3: " . ($p3 ?: '-');
@@ -138,8 +195,8 @@ class Hasil extends BaseController
                 $ket = trim($row['keterangan'] ?? '');
             }
 
-            // Jika prestasi kosong dan status Valid dan peringkat kosong:
-            if (empty($prestasi) && $status === 'Valid' && empty($row['peringkat'])) {
+            // Jika prestasi kosong DAN status Valid DAN peringkat kosong:
+            if (($prestasi === '' || $prestasi === null) && $status === 'Valid' && empty($row['peringkat'])) {
                 // Jika sebelumnya ada data di DB, hapus agar status benar-benar ter-reset
                 $existing = $this->hasilModel->where('peserta_event_id', $pesertaEventId)->first();
                 if ($existing) {
@@ -151,6 +208,12 @@ class Hasil extends BaseController
 
             $peringkat = !empty($row['peringkat']) ? (int)$row['peringkat'] : null;
             $medali    = $row['medali'] ?? 'None';
+
+            // Jika status tidak valid atau nilai prestasi 0/DQ/DNS/DNF/NM, pastikan tidak dapat peringkat juara/medali
+            if ($status !== 'Valid' || in_array(strtoupper($prestasi), ['DQ', 'NM', 'DNS', 'DNF', '0', '0.00', '-'])) {
+                $peringkat = null;
+                $medali    = 'None';
+            }
 
             $this->hasilModel->simpanHasil($pesertaEventId, [
                 'prestasi'        => $prestasi,
@@ -231,48 +294,10 @@ class Hasil extends BaseController
             return redirect()->back()->with('error', 'Belum ada catatan waktu/prestasi valid pada babak penyisihan ini. Silakan input hasil peserta terlebih dahulu.');
         }
 
-        // 1. Kelompokkan per heat untuk mencari Juara Hit (Pemenang tiap Hit)
-        $byHeat = [];
-        foreach ($allValid as $row) {
-            $h = (int)($row['heat'] ?: 1);
-            $byHeat[$h][] = $row;
-        }
-
-        // Ambil Juara 1 dari tiap heat
-        $heatWinners = [];
-        foreach ($byHeat as $h => $runners) {
-            $heatWinners[] = $runners[0];
-        }
-
-        // Urutkan juara hit berdasarkan catatan prestasi terbaik
-        usort($heatWinners, function ($a, $b) use ($satuan) {
-            $valA = (float)$a['nilai_angka'];
-            $valB = (float)$b['nilai_angka'];
-            return ($satuan === 'Waktu') ? ($valA <=> $valB) : ($valB <=> $valA);
-        });
-
-        // Ambil maksimal 4 juara hit terbaik
-        $selectedWinners = array_slice($heatWinners, 0, min(4, count($heatWinners)));
-        $selectedAtletIds = array_column($selectedWinners, 'atlet_id');
-        $qualifiers = $selectedWinners;
-
-        // 2. Sisanya menyesuaikan dari atlet tercepat berikutnya secara keseluruhan hingga total tepat 8 lintasan
-        foreach ($allValid as $row) {
-            if (count($qualifiers) >= 8) {
-                break;
-            }
-            if (!in_array($row['atlet_id'], $selectedAtletIds)) {
-                $qualifiers[] = $row;
-                $selectedAtletIds[] = $row['atlet_id'];
-            }
-        }
-
-        // 3. Urutkan seluruh 8 finalis berdasarkan catatan waktu terbaik (tercepat 1 s/d 8)
-        usort($qualifiers, function ($a, $b) use ($satuan) {
-            $valA = (float)$a['nilai_angka'];
-            $valB = (float)$b['nilai_angka'];
-            return ($satuan === 'Waktu') ? ($valA <=> $valB) : ($valB <=> $valA);
-        });
+        // Ambil atlet dengan catatan prestasi/waktu terbaik secara murni (tercepat dahulu)
+        // dari seluruh macam hit/penyisihan. Siapapun yang lebih cepat (contoh: pelari hit 5
+        // lebih cepat dari hit 1), dia langsung mendapatkan urutan unggulan pertama (Lintasan 4 dst).
+        $qualifiers = array_slice($allValid, 0, min($quota, count($allValid)));
 
         // Cek apakah sudah ada event babak Final untuk nomor lomba, KU, dan gender yang sama
         $finalEvent = $this->eventModel->where([
@@ -312,16 +337,9 @@ class Hasil extends BaseController
             $this->pesertaModel->where('event_id', $finalEventId)->delete();
         }
 
-        // 4. Seeding lintasan atletik resmi untuk 8 pelari (Langsung 8 Lintasan):
-        // tercepat 1 -> lintasan 4
-        // tercepat 2 -> lintasan 5
-        // tercepat 3 -> lintasan 3
-        // tercepat 4 -> lintasan 6
-        // tercepat 5 -> lintasan 2
-        // tercepat 6 -> lintasan 7
-        // tercepat 7 -> lintasan 1
-        // tercepat 8 -> lintasan 8
-        $laneOrder = [4, 5, 3, 6, 2, 7, 1, 8];
+        // 4. Seeding lintasan atletik resmi untuk 8 pelari babak final:
+        // Urutan lintasan terbaik dari juara hit: 4, 3, 5, 2, 6, 7, 1, 8
+        $laneOrder = [4, 3, 5, 2, 6, 7, 1, 8];
 
         foreach ($qualifiers as $idx => $q) {
             $assignedLane = $laneOrder[$idx] ?? ($idx + 1);
@@ -457,11 +475,16 @@ class Hasil extends BaseController
     {
         $event = $this->eventModel->getEventWithDetails($eventId);
         if (!$event) {
+            $kejuaraanId = $this->activeKejuaraan['id'] ?? 1;
+            $evByNo = $this->eventModel->where('kejuaraan_id', $kejuaraanId)->where('nomor_acara', $eventId)->first();
+            if ($evByNo) {
+                return redirect()->to(base_url('hasil/form-lapangan/' . $evByNo['id']));
+            }
             return redirect()->to(base_url('hasil'))->with('error', 'Acara perlombaan tidak ditemukan.');
         }
 
         $isBlank = (bool)($this->request->getGet('blank') ?? false);
-        $pesertaList = $this->pesertaModel->getPesertaByEvent($eventId);
+        $pesertaList = $this->pesertaModel->getPesertaByEvent((int)$event['id']);
         $isFieldEvent = $this->isFieldEvent($event);
 
         // Kelompokkan peserta berdasarkan Heat
@@ -493,6 +516,11 @@ class Hasil extends BaseController
     {
         $event = $this->eventModel->getEventWithDetails($eventId);
         if (!$event) {
+            $kejuaraanId = $this->activeKejuaraan['id'] ?? 1;
+            $evByNo = $this->eventModel->where('kejuaraan_id', $kejuaraanId)->where('nomor_acara', $eventId)->first();
+            if ($evByNo) {
+                return redirect()->to(base_url('hasil/cetak-hasil/' . $evByNo['id']));
+            }
             return redirect()->to(base_url('hasil'))->with('error', 'Acara perlombaan tidak ditemukan.');
         }
 

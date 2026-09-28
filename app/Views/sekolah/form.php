@@ -47,8 +47,24 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label">Alamat Sekolah</label>
-                        <textarea name="alamat" class="form-control" rows="3" placeholder="Alamat lengkap sekolah..."><?= old('alamat', $sekolah['alamat'] ?? '') ?></textarea>
+                        <label class="form-label">Asal Kabupaten / Kota <span class="text-danger">*</span></label>
+                        <select name="alamat" class="form-select" required>
+                            <?php 
+                            $currentKota = old('alamat', $sekolah['alamat'] ?? 'Kota Pekalongan');
+                            $kotaList = [
+                                'Kota Pekalongan',
+                                'Kabupaten Pekalongan',
+                                'Kabupaten Batang',
+                                'Kabupaten Pemalang',
+                                'Kabupaten Tegal',
+                                'Kota Tegal',
+                                'Kabupaten Brebes',
+                            ];
+                            ?>
+                            <?php foreach ($kotaList as $k): ?>
+                                <option value="<?= esc($k) ?>" <?= $currentKota === $k ? 'selected' : '' ?>><?= esc($k) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">

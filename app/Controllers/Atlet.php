@@ -203,10 +203,16 @@ class Atlet extends BaseController
         foreach ($eventIds as $eId) {
             $eId = (int)$eId;
             if ($eId > 0 && !in_array($eId, $existingEventIds)) {
+                // Beri nomor giliran/lintasan berikutnya secara berurutan
+                $maxUrut = $this->pesertaModel->where('event_id', $eId)->selectMax('no_urut')->first();
+                $nextUrut = ($maxUrut && !empty($maxUrut['no_urut'])) ? ((int)$maxUrut['no_urut'] + 1) : 1;
+
                 $this->pesertaModel->insert([
                     'event_id' => $eId,
                     'atlet_id' => $atletId,
                     'heat'     => 1,
+                    'lane'     => (string)$nextUrut,
+                    'no_urut'  => $nextUrut,
                 ]);
             }
         }

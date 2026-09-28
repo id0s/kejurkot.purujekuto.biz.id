@@ -244,6 +244,11 @@
                             <i class="bi bi-pencil-square me-1"></i> Edit TTD & Desain
                         </button>
 
+                        <!-- Cetak & Isi Data -->
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="openQuickPrintModal(<?= (int)$tpl['id'] ?>, '<?= esc(addslashes($tpl['nama'])) ?>')" title="Cetak dengan Nama / Data Peserta">
+                            <i class="bi bi-printer me-1"></i> Cetak & Isi Data
+                        </button>
+
                         <!-- Preview Cetak Blank -->
                         <a href="<?= base_url('piagam/cetak-custom?template_id=' . $tpl['id']) ?>" target="_blank" class="btn btn-sm btn-secondary-custom" title="Preview Tampilan Cetak">
                             <i class="bi bi-eye"></i>
@@ -639,6 +644,117 @@
             </form>
         </div>
     </div>
+</div>
+
+<!-- Modal Cetak & Isi Data Peserta Langsung -->
+<div class="modal fade" id="modalQuickPrint" tabindex="-1" aria-labelledby="modalQuickPrintLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-primary text-white border-0 py-3 px-4" style="background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-4">🖨️</span>
+                    <div>
+                        <h5 class="modal-title fw-bold text-white mb-0" id="modalQuickPrintLabel">
+                            Cetak Piagam dengan Data Peserta
+                        </h5>
+                        <small class="text-white-50" id="modalQuickPrintSub">Pilih template dan isi nama pemenang.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form action="<?= base_url('piagam/cetak-custom') ?>" method="get" target="_blank" id="formQuickPrint">
+                <input type="hidden" name="template_id" id="qp_template_id" value="">
+
+                <div class="modal-body p-4 bg-light">
+                    <!-- Opsi Mode -->
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body p-3">
+                            <label class="form-label fw-bold small text-dark mb-2">Pilih Cara Mengisi Data Piagam:</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="qp_mode" id="qp_mode_manual" value="manual" checked onchange="toggleQpMode('manual')">
+                                    <label class="form-check-label fw-semibold text-dark small" for="qp_mode_manual">
+                                        <i class="bi bi-pencil-square text-primary me-1"></i> Ketik Nama Atlet / Peserta Manual
+                                    </label>
+                                </div>
+                                <?php if (!empty($events)): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="qp_mode" id="qp_mode_event" value="event" onchange="toggleQpMode('event')">
+                                    <label class="form-check-label fw-semibold text-dark small" for="qp_mode_event">
+                                        <i class="bi bi-trophy text-warning me-1"></i> Cetak Juara dari Nomor Acara Lomba
+                                    </label>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Mode 1: Manual Input Atlet -->
+                    <div id="qp_panel_manual">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold small text-dark">
+                                    1. Nama Lengkap Atlet / Pemenang <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="nama_pemenang" id="qp_nama_pemenang" class="form-control fw-bold" placeholder="Contoh: DONNA ARTANTI MAHADANA" required>
+                                <small class="text-muted" style="font-size: 11px;">*Nama yang akan dicetak pada lembar piagam.</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark">Sebagai Juara <span class="text-danger">*</span></label>
+                                <select name="peringkat" id="qp_peringkat" class="form-select fw-bold">
+                                    <option value="1">Juara 1 (Satu) - Emas</option>
+                                    <option value="2">Juara 2 (Dua) - Perak</option>
+                                    <option value="3">Juara 3 (Tiga) - Perunggu</option>
+                                    <option value="4">Juara Harapan 1</option>
+                                    <option value="5">Juara Harapan 2</option>
+                                </select>
+                            </div>
+
+                            <input type="hidden" name="asal_sekolah" id="qp_asal_sekolah" value="">
+                            <input type="hidden" name="asal_kota" id="qp_asal_kota" value="">
+
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold small text-dark">Nomor & Kategori Lomba</label>
+                                <input type="text" name="nomor_lomba" id="qp_nomor_lomba" class="form-control" placeholder="Contoh: LARI 100 M KU 16-18 PUTRA">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark">Catatan Prestasi</label>
+                                <input type="text" name="prestasi" id="qp_prestasi" class="form-control font-monospace" placeholder="Contoh: 11.24 dtk">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Mode 2: Dari Event Acara Lomba -->
+                    <?php if (!empty($events)): ?>
+                    <div id="qp_panel_event" style="display: none;">
+                        <div class="alert alert-info py-2 px-3 small rounded-2 mb-3">
+                            <i class="bi bi-info-circle me-1"></i> Seluruh juara 1, 2, dan 3 dari nomor acara yang dipilih akan dicetak otomatis menggunakan template ini.
+                        </div>
+                        <label class="form-label fw-bold small text-dark">Pilih Nomor Acara Lomba:</label>
+                        <select id="qp_event_id" class="form-select fw-semibold">
+                            <?php foreach ($events as $ev): ?>
+                                <option value="<?= $ev['id'] ?>">
+                                    #<?= esc($ev['nomor_acara']) ?> - <?= esc($ev['nama_acara']) ?> (<?= ($ev['gender'] ?? '') === 'L' ? 'Putra' : 'Putri' ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="modal-footer bg-white border-top py-2 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm px-4 rounded-pill" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4 rounded-pill fw-bold shadow-sm" id="btnSubmitQuickPrint">
+                        <i class="bi bi-printer-fill me-1"></i> Buka Tampilan Cetak
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script>
 function updateTtdPreview(fieldPrefix, imgFile) {
@@ -809,7 +925,54 @@ document.addEventListener('DOMContentLoaded', function() {
             isiDefaultEksKaresidenan();
         });
     }
+
+    const formQp = document.getElementById('formQuickPrint');
+    if (formQp) {
+        formQp.addEventListener('submit', function(e) {
+            const isEvent = document.getElementById('qp_mode_event')?.checked;
+            if (isEvent) {
+                e.preventDefault();
+                const evId = document.getElementById('qp_event_id')?.value;
+                const tplId = document.getElementById('qp_template_id')?.value;
+                if (evId) {
+                    window.open('<?= base_url('piagam/cetak-event') ?>/' + evId + '?template_id=' + tplId, '_blank');
+                    const modalEl = document.getElementById('modalQuickPrint');
+                    const m = bootstrap.Modal.getInstance(modalEl);
+                    if (m) m.hide();
+                }
+            }
+        });
+    }
 });
+
+function openQuickPrintModal(tplId, tplNama) {
+    document.getElementById('qp_template_id').value = tplId;
+    document.getElementById('modalQuickPrintSub').innerText = 'Template: ' + tplNama;
+    toggleQpMode('manual');
+    const modalEl = document.getElementById('modalQuickPrint');
+    const m = new bootstrap.Modal(modalEl);
+    m.show();
+    setTimeout(() => {
+        const inp = document.getElementById('qp_nama_pemenang');
+        if (inp) inp.focus();
+    }, 400);
+}
+
+function toggleQpMode(mode) {
+    const pManual = document.getElementById('qp_panel_manual');
+    const pEvent = document.getElementById('qp_panel_event');
+    const inpNama = document.getElementById('qp_nama_pemenang');
+
+    if (mode === 'event') {
+        if (pManual) pManual.style.display = 'none';
+        if (pEvent) pEvent.style.display = 'block';
+        if (inpNama) inpNama.removeAttribute('required');
+    } else {
+        if (pManual) pManual.style.display = 'block';
+        if (pEvent) pEvent.style.display = 'none';
+        if (inpNama) inpNama.setAttribute('required', 'required');
+    }
+}
 </script>
 
 <?= $this->endSection() ?>

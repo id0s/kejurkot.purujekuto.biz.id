@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title) ?> — <?= esc($kejuaraan['nama'] ?? 'Kejurwil Atletik') ?></title>
+    <link rel="icon" type="image/png" href="<?= base_url('assets/images/pasi-logo.png') ?>">
     
     <!-- Google Fonts: Inter & Oswald for Athletic Numbers -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -336,6 +337,23 @@
             .cut-guide {
                 border-left-color: #888 !important;
             }
+            #toolbarContainer,
+            #debug-icon,
+            #debug-bar,
+            .ci-debug-toolbar {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+        }
+
+        #toolbarContainer,
+        #debug-icon,
+        #debug-bar,
+        .ci-debug-toolbar {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
         }
     </style>
     <style id="dynamic-page-style">

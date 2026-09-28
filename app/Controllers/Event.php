@@ -126,9 +126,15 @@ class Event extends BaseController
     {
         $event = $this->eventModel->getEventWithDetails($id);
         if (!$event) {
+            $kejuaraanId = $this->activeKejuaraan['id'] ?? 1;
+            $evByNo = $this->eventModel->where('kejuaraan_id', $kejuaraanId)->where('nomor_acara', $id)->first();
+            if ($evByNo) {
+                return redirect()->to(base_url('event/peserta/' . $evByNo['id']));
+            }
             return redirect()->to(base_url('event'))->with('error', 'Acara perlombaan tidak ditemukan.');
         }
 
+        $id = (int)$event['id'];
         $pesertaList = $this->pesertaModel->getPesertaByEvent($id);
         $registeredIds = array_column($pesertaList, 'atlet_id');
 

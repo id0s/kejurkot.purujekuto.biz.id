@@ -101,10 +101,6 @@
                     <span class="info-value"><?= esc($winner['nama_atlet'] ?? '-') ?></span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label"><i class="bi bi-building me-1"></i> Asal Sekolah</span>
-                    <span class="info-value"><?= esc($winner['nama_sekolah'] ?? '-') ?></span>
-                </div>
-                <div class="info-row">
                     <span class="info-label"><i class="bi bi-trophy-fill me-1"></i> Kejuaraan</span>
                     <span class="info-value"><?= esc($kejuaraan['nama'] ?? '-') ?></span>
                 </div>

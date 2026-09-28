@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title) ?></title>
+    <link rel="icon" type="image/png" href="<?= base_url('assets/images/pasi-logo.png') ?>">
 
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/bootstrap.min.css') ?>">
@@ -139,6 +140,24 @@
                 line-height: 1.3 !important;
                 margin-top: 2px !important;
             }
+            #toolbarContainer,
+            #debug-icon,
+            #debug-bar,
+            .ci-debug-toolbar {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+        }
+
+        /* Sembunyikan CodeIgniter Debug Toolbar & Icon CI */
+        #toolbarContainer,
+        #debug-icon,
+        #debug-bar,
+        .ci-debug-toolbar {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
         }
     </style>
 </head>

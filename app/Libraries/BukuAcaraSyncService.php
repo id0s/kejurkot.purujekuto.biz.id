@@ -322,8 +322,16 @@ class BukuAcaraSyncService
 
                 if (stripos($line, 'event') !== false && strpos($line, ':') !== false) {
                     if (preg_match('/event\s*:\s*(\d+)/i', $line, $m)) {
+                        $parsedEvNum = (int)$m[1];
+                        // Penanganan khusus buku acara Excel: Bagian judul heat 21 tertulis JuarAKU 30m padahal Acara 21 resmi adalah 80m, dan sebaliknya
+                        if ($parsedEvNum === 21 && stripos($line, '30') !== false) {
+                            $parsedEvNum = 22;
+                        } elseif ($parsedEvNum === 22 && stripos($line, '80') !== false) {
+                            $parsedEvNum = 21;
+                        }
+
                         $eventSections[] = [
-                            'event_num' => (int)$m[1],
+                            'event_num' => $parsedEvNum,
                             'start_row' => $r,
                             'title'     => $line,
                         ];

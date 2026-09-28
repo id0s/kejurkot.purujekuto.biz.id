@@ -593,7 +593,7 @@
             font-size: 15.5px;
             font-weight: 700;
             color: #1E293B;
-            width: 250px;
+            width: 145px;
             white-space: nowrap;
         }
 
@@ -602,7 +602,7 @@
             font-size: 16px;
             font-weight: 800;
             color: #1E293B;
-            width: 25px;
+            width: 20px;
             text-align: center;
         }
 
@@ -634,7 +634,7 @@
             font-size: 15px;
             font-weight: 700;
             color: #1E293B;
-            width: 240px;
+            width: 145px;
             white-space: nowrap;
             flex-shrink: 0;
             text-align: left;
@@ -645,9 +645,29 @@
             font-size: 16px;
             font-weight: 800;
             color: #1E293B;
-            width: 25px;
+            width: 20px;
             text-align: center;
             flex-shrink: 0;
+        }
+
+        /* --- KHUSUS USIA DINI (KU 5, 6, 7 / BACKGROUND DENGAN TROPHY DI KIRI) --- */
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-content-wrapper {
+            left: 45mm;
+            right: 15mm;
+            align-items: center;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-list {
+            width: 100%;
+            max-width: 530px;
+            margin: 0 auto 4mm auto;
+            padding-left: 20px;
+            box-sizing: border-box;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .portrait-official-signature-center {
+            left: 56% !important;
+            transform: translateX(-50%) !important;
         }
 
         .overlay-data-row .val {
@@ -2252,34 +2272,46 @@ if (!function_exists('formatNomorLomba567')) {
 if (!function_exists('formatPrestasiPiagam')) {
     function formatPrestasiPiagam($rawPrestasi, $nomorLomba = '') {
         $p = trim((string)$rawPrestasi);
-        $isField = (bool)preg_match('/(tolak|lempar|lompat|cakram|peluru|lembing)/i', $nomorLomba);
-
-        if ($isField) {
-            if (empty($p) || $p === '-' || $p === '0' || $p === '0.00' || $p === '00.00') {
-                return '0.00 m';
-            }
-            if (preg_match('/^(\d+(\.\d+)?)\s*m?$/i', $p, $m)) {
-                return $m[1] . ' m';
-            }
-            return $p;
-        }
-
-        // Nomor Lari / Waktu / Seluruh Nomor Lomba Lainnya:
-        if (empty($p) || $p === '-' || $p === '0' || $p === '00:00.00' || $p === '0.00' || $p === '0:00') {
+        if ($p === '') {
             return '0:00.00';
         }
-        if (preg_match('/^\d{1,2}:\d{2}(\.\d{2})?$/', $p)) {
-            if (!str_contains($p, '.')) {
-                return $p . '.00';
+
+        $upper = strtoupper($p);
+        if (in_array($upper, ['DQ', 'DNS', 'DNF', 'NM', 'DISK', 'DISQ'])) {
+            return $upper;
+        }
+
+        if (in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
+            return '0:00.00';
+        }
+
+        // Hapus satuan di ujung seperti m, meter, jarak, dtk, detik, s
+        $cleaned = trim(preg_replace('/\s*(m|meter|jarak|dtk|detik|s)$/i', '', $p));
+
+        // Format waktu yang sudah memiliki menit:detik misal 23:28.00 atau 3:44.00 atau 0:06.48
+        if (preg_match('/^(\d+):(\d{2})(\.\d{1,2})?$/', $cleaned, $m)) {
+            $dec = isset($m[3]) ? $m[3] : '.00';
+            if (strlen($dec) === 2) {
+                $dec .= '0';
             }
-            return $p;
+            return $m[1] . ':' . $m[2] . $dec;
         }
-        if (preg_match('/^(\d{1,2})\.(\d{2})$/', $p, $m)) {
-            return sprintf('0:%02d.%02d', (int)$m[1], (int)$m[2]);
+
+        // Format angka desimal biasa (misal 10.61, 8.93, 6.48, 44.64, 3.54) -> ubah ke 0:00.00
+        if (preg_match('/^(\d+)\.(\d{1,2})$/', $cleaned, $m)) {
+            $sec = (int)$m[1];
+            $dec = $m[2];
+            if (strlen($dec) === 1) {
+                $dec .= '0';
+            }
+            return sprintf('0:%02d.%s', $sec, $dec);
         }
-        if (preg_match('/^(\d{1,2})\.(\d{2})\s*(dtk|detik|s)?$/i', $p, $m)) {
-            return sprintf('0:%02d.%02d', (int)$m[1], (int)$m[2]);
+
+        // Format angka bulat (misal 10 atau 8) -> ubah ke 0:10.00
+        if (ctype_digit($cleaned)) {
+            return sprintf('0:%02d.00', (int)$cleaned);
         }
+
         return $p;
     }
 }
@@ -2450,15 +2482,31 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
     }
 
     if ($isUsia567) {
+        $usiaSpecific = '567';
+        // Deteksi umur spesifik 5, 6, atau 7 (prioritaskan nomor lomba spesifik)
+        if (preg_match('/(?:usia|ku|u)\s*5\b|\b5\s*(?:th|tahun)\b/i', $item['nomor_lomba'] ?? '')) {
+            $usiaSpecific = '5';
+        } elseif (preg_match('/(?:usia|ku|u)\s*6\b|\b6\s*(?:th|tahun)\b/i', $item['nomor_lomba'] ?? '')) {
+            $usiaSpecific = '6';
+        } elseif (preg_match('/(?:usia|ku|u)\s*7\b|\b7\s*(?:th|tahun)\b/i', $item['nomor_lomba'] ?? '')) {
+            $usiaSpecific = '7';
+        } elseif (preg_match('/(?:usia|ku|u)\s*5\b|\b5\s*(?:th|tahun)\b/i', $kuCheckStr) && !preg_match('#5\s*[-–/&]\s*6|567#', $kuCheckStr)) {
+            $usiaSpecific = '5';
+        } elseif (preg_match('/(?:usia|ku|u)\s*6\b|\b6\s*(?:th|tahun)\b/i', $kuCheckStr) && !preg_match('#5\s*[-–/&]\s*6|6\s*[-–/&]\s*7|567#', $kuCheckStr)) {
+            $usiaSpecific = '6';
+        } elseif (preg_match('/(?:usia|ku|u)\s*7\b|\b7\s*(?:th|tahun)\b/i', $kuCheckStr) && !preg_match('#6\s*[-–/&]\s*7|567#', $kuCheckStr)) {
+            $usiaSpecific = '7';
+        }
+
         $displayHeaderLines = [
-            "KEJUARAAN ATLETIK USIA DINI 567 TAHUN",
+            "KEJUARAAN ATLETIK USIA DINI " . ($usiaSpecific === '567' ? '567' : $usiaSpecific) . " TAHUN",
             "TAHUN " . ($item['tahun'] ?? '2026')
         ];
         $cleanNomor = formatNomorPiagam567($cleanNomor, $idx);
         $displayKalimatPembuka = "Pengurus Kota Persatuan Atletik Seluruh Indonesia (PASI) Kota Pekalongan dengan ini memberikan Piagam Penghargaan kepada :";
         $displayNomorLomba = formatNomorLomba567($item['nomor_lomba'] ?? '');
         $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba);
-        $displayKalimatPenutup = "dalam Kejuaraan Atletik KU 567 Tahun Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
+        $displayKalimatPenutup = "dalam Kejuaraan Atletik KU " . ($usiaSpecific === '567' ? '567' : $usiaSpecific) . " Tahun Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
     } else {
         $displayHeaderLines = explode("\n", trim($template['instansi_header'] ?: "PENGURUS PROVINSI PERSATUAN ATLETIK\nSELURUH INDONESIA\nJAWA TENGAH"));
         $displayKalimatPembuka = $template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :';
@@ -2470,14 +2518,13 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
     }
 
     $jabatanKetuaPekalongan = "Pengurus Kota PASI Pekalongan\nKetua Umum";
+    $orientasi = $template['orientasi'] ?? 'landscape';
+    $tipe      = $template['tipe'] ?? 'overlay';
+    $bgFile    = $template['file_background'] ?? null;
+    $hasBg     = !empty($bgFile) && file_exists(FCPATH . 'uploads/piagam/templates/' . $bgFile);
     ?>
-    <div class="piagam-sheet" id="sheet-<?= $idx ?>" data-is-usia-567="<?= $isUsia567 ? '1' : '0' ?>">
+    <div class="piagam-sheet <?= $isUsia567 ? 'is-usia-567' : '' ?> sheet-<?= esc($orientasi) ?>" id="sheet-<?= $idx ?>" data-is-usia-567="<?= $isUsia567 ? '1' : '0' ?>">
         <?php 
-        $orientasi = $template['orientasi'] ?? 'landscape';
-        $tipe      = $template['tipe'] ?? 'overlay';
-        $bgFile    = $template['file_background'] ?? null;
-        $hasBg     = !empty($bgFile) && file_exists(FCPATH . 'uploads/piagam/templates/' . $bgFile);
-
         // Resolve signature image URLs & info
         $img3 = $template['ttd_3_image'] ?? 'ttd_agus_widodo_pasi_jateng.png';
         if (empty($img3) || $img3 === 'ttd_rumini_clean.png' || $img3 === 'rumini_full_block.png' || $img3 === 'rumini_exact_stamp_sig.png' || $img3 === 'crop_rumini_stamp_scribble.png') {
