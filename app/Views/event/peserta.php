@@ -1840,7 +1840,7 @@ function printPreviewStartList() {
     </head>
     <body>
         <div class="no-print" style="margin-bottom: 15px; text-align: right;">
-            <button onclick="window.print()" style="padding: 8px 16px; background: #0052cc; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: sans-serif;">🖨 Cetak Dokumen</button>
+            <button onclick="window.print()" style="padding: 8px 16px; background: #0052cc; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: sans-serif;"><i class="bi bi-printer-fill me-1"></i> Cetak Dokumen</button>
             <button onclick="window.close()" style="padding: 8px 16px; background: #eee; border: 1px solid #ccc; cursor: pointer; border-radius: 4px; margin-left: 6px; font-family: sans-serif;">Tutup</button>
         </div>
         <div class="header-box">

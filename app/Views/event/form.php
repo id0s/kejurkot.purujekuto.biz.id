@@ -78,7 +78,7 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Jadwal Hari / Tanggal</label>
-                            <input type="text" name="jadwal_hari" class="form-control" value="<?= old('jadwal_hari', $event['jadwal_hari'] ?? 'Sabtu, 29 Agustus 2026') ?>" placeholder="Misal: Sabtu, 29 Agustus 2026">
+                            <input type="text" name="jadwal_hari" class="form-control" value="<?= old('jadwal_hari', $event['jadwal_hari'] ?? (!empty($activeKejuaraan['id']) && (int)$activeKejuaraan['id'] === 2 ? 'Sabtu, 29 Agustus 2026' : 'Minggu, 27 September 2026')) ?>" placeholder="Misal: Minggu, 27 September 2026">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Jadwal Waktu / Sesi</label>

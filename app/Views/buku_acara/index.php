@@ -3,6 +3,20 @@
 <?= $this->section('content') ?>
 
 <?php
+$tanggalBukuAcara = '27 September 2026';
+if (!empty($activeKejuaraan['tanggal_mulai'])) {
+    $timeBA = strtotime($activeKejuaraan['tanggal_mulai']);
+    $bIndo = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
+    $tanggalBukuAcara = date('j', $timeBA) . ' ' . ($bIndo[(int)date('n', $timeBA)] ?? '') . ' ' . date('Y', $timeBA);
+} elseif (!empty($activeKejuaraan['id']) && (int)$activeKejuaraan['id'] === 2) {
+    $tanggalBukuAcara = '29 Agustus 2026';
+}
+$jadwalHariDefault = (!empty($activeKejuaraan['id']) && (int)$activeKejuaraan['id'] === 2)
+    ? $jadwalHariDefault
+    : 'Minggu, 27 September 2026';
+?>
+
+<?php
 $currentTab = $_GET['tab'] ?? 'susunan';
 $sortDir    = strtolower($sortDir ?? 'asc') === 'desc' ? 'desc' : 'asc';
 $sortBy     = $sortBy ?? 'nomor_acara';
@@ -279,7 +293,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                 <?php if (!$dateRendered): ?>
                                                     <td rowspan="<?= $totalRows ?>" class="text-center fw-bold align-top bg-light" style="padding-top: 2rem; letter-spacing: 0.5px; border-right: 2px solid #0052CC; color: #0052CC;">
                                                         <div style="writing-mode: vertical-rl; transform: rotate(180deg); margin: auto; font-size: 14px; font-weight: 700; position: sticky; top: 80px;">
-                                                            <?= esc($ev['jadwal_hari'] ?: 'SABTU, 29 AGUSTUS 2026') ?>
+                                                            <?= esc($ev['jadwal_hari'] ?: strtoupper($jadwalHariDefault)) ?>
                                                         </div>
                                                     </td>
                                                     <?php $dateRendered = true; ?>
@@ -294,7 +308,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                     <span class="badge <?= $ev['gender'] === 'L' ? 'badge-blue' : 'badge-amber' ?>"><?= $ev['gender'] === 'L' ? 'Putra (Male)' : 'Putri (Female)' ?></span>
                                                 </td>
                                                 <td class="text-center <?= $sortBy === 'babak' ? 'bg-blue-light' : '' ?>">
-                                                    <span class="badge <?= $ev['babak'] === 'Final' ? 'badge-emerald' : 'badge-amber' ?> fw-bold" style="cursor: pointer;" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?>', 'Pagi', '08.00', '<?= esc($ev['babak']) ?>')" title="Klik untuk ubah Babak">
+                                                    <span class="badge <?= $ev['babak'] === 'Final' ? 'badge-emerald' : 'badge-amber' ?> fw-bold" style="cursor: pointer;" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: $jadwalHariDefault) ?>', 'Pagi', '08.00', '<?= esc($ev['babak']) ?>')" title="Klik untuk ubah Babak">
                                                         <?= strtoupper(esc($ev['babak'])) ?>
                                                     </span>
                                                 </td>
@@ -310,7 +324,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                 <?php endif; ?>
 
                                                 <td class="text-center">
-                                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?>', 'Pagi', '08.00', '<?= esc($ev['babak']) ?>')" title="Atur Babak & Jadwal">
+                                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: $jadwalHariDefault) ?>', 'Pagi', '08.00', '<?= esc($ev['babak']) ?>')" title="Atur Babak & Jadwal">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 </td>
@@ -326,7 +340,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                 <?php if (!$dateRendered): ?>
                                                     <td rowspan="<?= $totalRows ?>" class="text-center fw-bold align-top bg-light" style="padding-top: 2rem; letter-spacing: 0.5px; border-right: 2px solid #0052CC; color: #0052CC;">
                                                         <div style="writing-mode: vertical-rl; transform: rotate(180deg); margin: auto; font-size: 14px; font-weight: 700; position: sticky; top: 80px;">
-                                                            <?= esc($ev['jadwal_hari'] ?: 'SABTU, 29 AGUSTUS 2026') ?>
+                                                            <?= esc($ev['jadwal_hari'] ?: strtoupper($jadwalHariDefault)) ?>
                                                         </div>
                                                     </td>
                                                     <?php $dateRendered = true; ?>
@@ -341,7 +355,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                     <span class="badge <?= $ev['gender'] === 'L' ? 'badge-blue' : 'badge-amber' ?>"><?= $ev['gender'] === 'L' ? 'Putra (Male)' : 'Putri (Female)' ?></span>
                                                 </td>
                                                 <td class="text-center <?= $sortBy === 'babak' ? 'bg-blue-light' : '' ?>">
-                                                    <span class="badge <?= $ev['babak'] === 'Final' ? 'badge-emerald' : 'badge-amber' ?> fw-bold" style="cursor: pointer;" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?>', 'Sore', '13.30', '<?= esc($ev['babak']) ?>')" title="Klik untuk ubah Babak">
+                                                    <span class="badge <?= $ev['babak'] === 'Final' ? 'badge-emerald' : 'badge-amber' ?> fw-bold" style="cursor: pointer;" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: $jadwalHariDefault) ?>', 'Sore', '13.30', '<?= esc($ev['babak']) ?>')" title="Klik untuk ubah Babak">
                                                         <?= strtoupper(esc($ev['babak'])) ?>
                                                     </span>
                                                 </td>
@@ -357,7 +371,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                 <?php endif; ?>
 
                                                 <td class="text-center">
-                                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?>', 'Sore', '13.30', '<?= esc($ev['babak']) ?>')" title="Atur Babak & Jadwal">
+                                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: $jadwalHariDefault) ?>', 'Sore', '13.30', '<?= esc($ev['babak']) ?>')" title="Atur Babak & Jadwal">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 </td>
@@ -381,7 +395,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                             <?php if (!$dateRendered): ?>
                                                 <td rowspan="<?= $totalRows ?>" class="text-center fw-bold align-top bg-light" style="padding-top: 2rem; letter-spacing: 0.5px; border-right: 2px solid #0052CC; color: #0052CC;">
                                                     <div style="writing-mode: vertical-rl; transform: rotate(180deg); margin: auto; font-size: 14px; font-weight: 700; position: sticky; top: 80px;">
-                                                        <?= esc($ev['jadwal_hari'] ?: 'SABTU, 29 AGUSTUS 2026') ?>
+                                                        <?= esc($ev['jadwal_hari'] ?: strtoupper($jadwalHariDefault)) ?>
                                                     </div>
                                                 </td>
                                                 <?php $dateRendered = true; ?>
@@ -396,7 +410,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                 <span class="badge <?= $ev['gender'] === 'L' ? 'badge-blue' : 'badge-amber' ?>"><?= $ev['gender'] === 'L' ? 'Putra (Male)' : 'Putri (Female)' ?></span>
                                             </td>
                                             <td class="text-center <?= $sortBy === 'babak' ? 'bg-blue-light' : '' ?>">
-                                                <span class="badge <?= $ev['babak'] === 'Final' ? 'badge-emerald' : 'badge-amber' ?> fw-bold" style="cursor: pointer;" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?>', '<?= $sesiText ?>', '<?= $jamText ?>', '<?= esc($ev['babak']) ?>')" title="Klik untuk ubah Babak">
+                                                <span class="badge <?= $ev['babak'] === 'Final' ? 'badge-emerald' : 'badge-amber' ?> fw-bold" style="cursor: pointer;" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: $jadwalHariDefault) ?>', '<?= $sesiText ?>', '<?= $jamText ?>', '<?= esc($ev['babak']) ?>')" title="Klik untuk ubah Babak">
                                                     <?= strtoupper(esc($ev['babak'])) ?>
                                                 </span>
                                             </td>
@@ -407,7 +421,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                                                 </span>
                                             </td>
                                             <td class="text-center">
-                                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?>', '<?= $sesiText ?>', '<?= $jamText ?>', '<?= esc($ev['babak']) ?>')" title="Atur Babak & Jadwal">
+                                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="openEditSesiModal(<?= $ev['id'] ?>, '<?= esc($ev['nama_acara']) ?>', '<?= esc($ev['jadwal_hari'] ?: $jadwalHariDefault) ?>', '<?= $sesiText ?>', '<?= $jamText ?>', '<?= esc($ev['babak']) ?>')" title="Atur Babak & Jadwal">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
                                             </td>
@@ -827,7 +841,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
                     <?= esc($activeKejuaraan['nama'] ?? 'Kejurwil Kelompok Umur Atletik Tingkat Kota Pekalongan') ?>
                 </h5>
                 <h6 class="fw-bold mb-4" style="font-family: 'Times New Roman', serif; color: #000;">
-                    <?= esc($activeKejuaraan['tempat'] ?? 'Stadion Hoegeng') ?> 29 Agustus 2026
+                    <?= esc($activeKejuaraan['tempat'] ?? 'Stadion Hoegeng') ?>, <?= esc($tanggalBukuAcara) ?>
                 </h6>
 
                 <!-- Logo PASI -->
@@ -921,7 +935,7 @@ $getSortIcon = function(string $col, string $type = 'alpha') use ($sortBy, $sort
 
                     <div class="mb-3">
                         <label class="form-label">Hari / Tanggal</label>
-                        <input type="text" name="jadwal_hari" id="editJadwalHari" class="form-control" value="Sabtu, 29 Agustus 2026">
+                        <input type="text" name="jadwal_hari" id="editJadwalHari" class="form-control" value="<?= esc($jadwalHariDefault) ?>">
                     </div>
 
                     <div class="row g-3">

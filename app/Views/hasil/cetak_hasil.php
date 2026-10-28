@@ -101,6 +101,15 @@
             text-align: right;
             padding-left: 10px;
         }
+        .results-table .col-heat {
+            width: 48px;
+            text-align: center;
+        }
+        .results-table .col-qual {
+            width: 48px;
+            text-align: center;
+            font-weight: bold;
+        }
 
         @media print {
             body {
@@ -210,7 +219,52 @@
     $isRelayEvent = (bool)preg_match('/(estafet|4\s*x|5\s*x|relay)/i', ($event['nama_acara'] ?? '') . ' ' . ($event['kategori_lomba'] ?? ''));
     ?>
 
-    <!-- Official Results Table (Gambar 3) -->
+    <?php if (count($heats) > 1): ?>
+        <!-- Per-Heat Results Breakdown (Format Resmi Meet Manager) -->
+        <?php foreach ($heats as $hNumber => $hAthletes): ?>
+            <div style="font-size: 12.5px; font-weight: bold; margin-top: 14px; margin-bottom: 4px; border-bottom: 1px dashed #000; padding-bottom: 2px;">
+                Heat <?= $hNumber ?> of <?= count($heats) ?> (<?= esc($event['babak'] ?: 'Prelims') ?>)
+            </div>
+            <table class="results-table" style="margin-bottom: 12px;">
+                <thead>
+                    <tr>
+                        <th class="col-rank">PL</th>
+                        <th class="col-bib">BIB</th>
+                        <th class="col-name">NAMA <?= $isRelayEvent ? 'TIM / REGU' : 'ATLET' ?></th>
+                        <?php if (!$isRelayEvent): ?><th class="col-yr">YR</th><?php endif; ?>
+                        <th class="col-team">TEAM</th>
+                        <th class="col-mark"><?= ($isFieldEvent ?? false) ? 'MARK' : 'TIME' ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $hRank = 1;
+                    foreach ($hAthletes as $ha): 
+                        $bib = ltrim($ha['no_dada'] ?? '', "'") ?: '-';
+                        $yr = (!empty($ha['tanggal_lahir']) && $ha['tanggal_lahir'] !== '0000-00-00') ? date('y', strtotime($ha['tanggal_lahir'])) : '--';
+                        $team = strtoupper($ha['nama_sekolah'] ?: '-');
+                        $st = strtoupper($ha['status_prestasi'] ?? 'VALID');
+                        $pr = !empty($ha['prestasi']) ? esc($ha['prestasi']) : ($st !== 'VALID' ? $st : '-');
+                    ?>
+                    <tr>
+                        <td class="col-rank"><?= ($st === 'VALID' && !empty($ha['prestasi'])) ? $hRank : '---' ?></td>
+                        <td class="col-bib"><?= esc($bib) ?></td>
+                        <td class="col-name"><?= esc($ha['nama_atlet']) ?></td>
+                        <?php if (!$isRelayEvent): ?><td class="col-yr"><?= $yr ?></td><?php endif; ?>
+                        <td class="col-team"><?= esc($team) ?></td>
+                        <td class="col-mark"><?= $pr ?></td>
+                    </tr>
+                    <?php if ($st === 'VALID' && !empty($ha['prestasi'])) $hRank++; endforeach; ?>
+                </tbody>
+            </table>
+        <?php endforeach; ?>
+
+        <div style="font-size: 12.5px; font-weight: bold; margin-top: 18px; margin-bottom: 6px; border-top: 2px solid #000; padding-top: 6px;">
+            Rekap Hasil Keseluruhan - Compiled By <?= ($isFieldEvent ?? false) ? 'Mark' : 'Time' ?>
+        </div>
+    <?php endif; ?>
+
+    <!-- Official Results Table (Compiled Overall) -->
     <table class="results-table">
         <thead>
             <tr>
@@ -221,13 +275,19 @@
                     <th class="col-yr">YR</th>
                 <?php endif; ?>
                 <th class="col-team">TEAM</th>
+                <?php if (count($heats) > 1): ?>
+                    <th class="col-heat">H#</th>
+                <?php endif; ?>
                 <th class="col-mark"><?= ($isFieldEvent ?? false) ? 'MARK' : 'TIME' ?></th>
+                <?php if (strcasecmp($event['babak'], 'Penyisihan') === 0): ?>
+                    <th class="col-qual">QUAL</th>
+                <?php endif; ?>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($validList) && empty($unrankedList)): ?>
                 <tr>
-                    <td colspan="<?= $isRelayEvent ? 5 : 6 ?>" class="text-center py-4" style="font-style: italic;">
+                    <td colspan="<?= (count($heats) > 1 ? 7 : 6) + (strcasecmp($event['babak'], 'Penyisihan') === 0 ? 1 : 0) ?>" class="text-center py-4" style="font-style: italic;">
                         Belum ada catatan hasil yang diinputkan untuk acara ini.
                     </td>
                 </tr>
@@ -243,6 +303,7 @@
                     $team = strtoupper($p['nama_sekolah'] ?: '-');
                     $prestasi = !empty($p['prestasi']) ? esc($p['prestasi']) : '-';
                     $rank = !empty($p['peringkat']) ? (int)$p['peringkat'] : $autoRank;
+                    $isQual = (strcasecmp($event['babak'], 'Penyisihan') === 0 && $rank <= 8);
                 ?>
                     <tr>
                         <td class="col-rank"><?= $rank ?></td>
@@ -259,7 +320,13 @@
                             <td class="col-yr"><?= $yr ?></td>
                         <?php endif; ?>
                         <td class="col-team"><?= esc($team) ?></td>
+                        <?php if (count($heats) > 1): ?>
+                            <td class="col-heat">H<?= $p['heat'] ?: 1 ?></td>
+                        <?php endif; ?>
                         <td class="col-mark"><?= $prestasi ?></td>
+                        <?php if (strcasecmp($event['babak'], 'Penyisihan') === 0): ?>
+                            <td class="col-qual"><?= $isQual ? 'q' : '' ?></td>
+                        <?php endif; ?>
                     </tr>
                 <?php 
                     $autoRank++;
@@ -292,7 +359,13 @@
                             <td class="col-yr"><?= $yr ?></td>
                         <?php endif; ?>
                         <td class="col-team"><?= esc($team) ?></td>
+                        <?php if (count($heats) > 1): ?>
+                            <td class="col-heat">H<?= $p['heat'] ?: 1 ?></td>
+                        <?php endif; ?>
                         <td class="col-mark"><?= esc($status) ?></td>
+                        <?php if (strcasecmp($event['babak'], 'Penyisihan') === 0): ?>
+                            <td class="col-qual"></td>
+                        <?php endif; ?>
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>

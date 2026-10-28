@@ -22,6 +22,11 @@ $routes->get('buku-acara/export-excel/(:any)', 'BukuAcara::exportExcel/$1');
 // Verifikasi Piagam (Publik — tanpa login, diakses via QR Code)
 $routes->get('verifikasi/piagam/(:any)', 'Piagam::verifikasi/$1');
 
+// E-Piagam Online per Sekolah (Publik — tanpa login, tautan resmi per sekolah)
+$routes->get('piagam/export-sekolah-excel', 'Piagam::exportSekolahExcel');
+$routes->get('piagam/sekolah/(:any)', 'Piagam::sekolah/$1');
+$routes->get('piagam/download-sekolah-pdf/(:any)', 'Piagam::downloadSekolahPdf/$1');
+
 // Dashboard Admin (Protected by Auth)
 $routes->get('dashboard', 'Dashboard::index');
 
@@ -33,6 +38,8 @@ $routes->group('kejuaraan', static function ($routes) {
     $routes->post('save', 'Kejuaraan::save');
     $routes->post('save/(:num)', 'Kejuaraan::save/$1');
     $routes->get('activate/(:num)', 'Kejuaraan::activate/$1');
+    $routes->get('switch/(:num)', 'Kejuaraan::switch/$1');
+    $routes->post('update-tanggal', 'Kejuaraan::updateTanggal');
     $routes->post('delete/(:num)', 'Kejuaraan::delete/$1');
 });
 
@@ -60,10 +67,32 @@ $routes->group('nomor-lomba', static function ($routes) {
     $routes->post('delete/(:num)', 'NomorLomba::delete/$1');
 });
 
+// Cabang Olahraga (Cabor) - Superadmin only
+$routes->group('cabor', ['filter' => 'role:admin'], static function ($routes) {
+    $routes->get('', 'Cabor::index');
+    $routes->post('save', 'Cabor::save');
+    $routes->post('delete/(:num)', 'Cabor::delete/$1');
+});
+
+// Manajemen Pengguna & Admin Cabor - Superadmin only
+$routes->group('users', ['filter' => 'role:admin'], static function ($routes) {
+    $routes->get('', 'User::index');
+    $routes->get('create', 'User::create');
+    $routes->post('store', 'User::store');
+    $routes->get('edit/(:num)', 'User::edit/$1');
+    $routes->post('update/(:num)', 'User::update/$1');
+    $routes->get('toggle-status/(:num)', 'User::toggleStatus/$1');
+    $routes->post('delete/(:num)', 'User::delete/$1');
+});
+
 // Atlet
 $routes->group('atlet', static function ($routes) {
     $routes->get('', 'Atlet::index');
     $routes->get('create', 'Atlet::create');
+    $routes->get('batch-register', 'Atlet::batchRegister');
+    $routes->post('batch-register-save', 'Atlet::batchRegisterSave');
+    $routes->get('verifikasi-akta', 'Atlet::verifikasiAkta');
+    $routes->post('update-akta-status', 'Atlet::updateAktaStatus');
     $routes->get('edit/(:num)', 'Atlet::edit/$1');
     $routes->post('save', 'Atlet::save');
     $routes->post('save/(:num)', 'Atlet::save/$1');
@@ -74,6 +103,7 @@ $routes->group('atlet', static function ($routes) {
     $routes->post('generate-no-dada', 'Atlet::generateNoDada');
     $routes->get('cetak-nomor-lomba', 'Atlet::cetakNomorLomba');
     $routes->post('upload-template-no-dada', 'Atlet::uploadTemplateNoDada');
+    $routes->get('view-akta/(:num)', 'Atlet::viewAktaFile/$1');
 });
 
 // Event
@@ -93,7 +123,7 @@ $routes->group('event', static function ($routes) {
     $routes->post('auto-arrange-all', 'Event::autoArrangeAll');
 });
 
-// Hasil
+// Hasil (Dapat diakses oleh Admin & Admin Cabor untuk Input Hasil & Rekap)
 $routes->group('hasil', static function ($routes) {
     $routes->get('', 'Hasil::index');
     $routes->get('input/(:num)', 'Hasil::input/$1');
@@ -104,10 +134,11 @@ $routes->group('hasil', static function ($routes) {
     $routes->get('form-lapangan/(:num)', 'Hasil::formLapangan/$1');
     $routes->get('cetak-hasil/(:num)', 'Hasil::cetakHasil/$1');
     $routes->match(['GET', 'POST'], 'qualify-to-final/(:num)', 'Hasil::qualifyToFinal/$1');
+    $routes->get('toggle-status/(:num)', 'Hasil::toggleStatus/$1');
 });
 
-// Buku Acara
-$routes->group('buku-acara', static function ($routes) {
+// Buku Acara (Khusus Superadmin)
+$routes->group('buku-acara', ['filter' => 'role:admin'], static function ($routes) {
     $routes->get('', 'BukuAcara::index');
     $routes->post('update-jadwal', 'BukuAcara::updateJadwal');
     $routes->post('sync-official', 'BukuAcara::syncOfficial');
@@ -121,11 +152,26 @@ $routes->group('laporan', static function ($routes) {
     $routes->get('klasemen', 'Laporan::klasemen');
 });
 
-// Piagam Penghargaan
-$routes->group('piagam', static function ($routes) {
+// Piagam Kejurkot 2026 (Khusus Superadmin)
+$routes->group('piagam-kejurkot', ['filter' => 'role:admin'], static function ($routes) {
+    $routes->get('', 'Piagam::kejurkotIndex');
+    $routes->post('save', 'Piagam::saveKejurkotPemenang');
+    $routes->post('import', 'Piagam::importKejurkotExcel');
+    $routes->get('cetak', 'Piagam::cetakKejurkot');
+    $routes->get('cetak/(:num)', 'Piagam::cetakKejurkotSingle/$1');
+    $routes->post('delete/(:num)', 'Piagam::deleteKejurkotPemenang/$1');
+});
+
+// Piagam Penghargaan & Templates (Khusus Superadmin)
+$routes->group('piagam', ['filter' => 'role:admin'], static function ($routes) {
     $routes->get('', 'Piagam::index');
     $routes->get('cetak-event/(:num)', 'Piagam::cetakEvent/$1');
     $routes->get('cetak-all', 'Piagam::cetakAll');
+    $routes->get('cetak-daerah', 'Piagam::daerahIndex');
+    $routes->get('cetak-daerah/(:any)', 'Piagam::cetakByDaerah/$1');
+    $routes->get('sekolah', 'Piagam::sekolahIndex');
+    $routes->get('export-sekolah-excel', 'Piagam::exportSekolahExcel');
+    $routes->get('download-sekolah-pdf/(:any)', 'Piagam::downloadSekolahPdf/$1');
     $routes->match(['GET', 'POST'], 'cetak-custom', 'Piagam::cetakCustom');
     $routes->get('templates', 'Piagam::templates');
     $routes->post('save-template', 'Piagam::saveTemplate');
@@ -133,4 +179,9 @@ $routes->group('piagam', static function ($routes) {
     $routes->get('set-default/(:num)', 'Piagam::setDefaultTemplate/$1');
     $routes->get('toggle-active/(:num)', 'Piagam::toggleActiveTemplate/$1');
     $routes->get('delete-template/(:num)', 'Piagam::deleteTemplate/$1');
+    $routes->get('preview-akta/(:num)', 'Piagam::previewAkta/$1');
+    $routes->get('view-akta-file/(:num)', 'Piagam::viewAktaFile/$1');
+    $routes->post('update-nama-atlet', 'Piagam::updateNamaAtlet');
+    $routes->post('upload-akta', 'Piagam::uploadAkta');
+    $routes->post('update-tanggal', 'Piagam::updateTanggal');
 });

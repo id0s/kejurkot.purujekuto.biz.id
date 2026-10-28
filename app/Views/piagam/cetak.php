@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@700;800;900&family=Great+Vibes&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=Montserrat:wght@600;700;800;900&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/bootstrap.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/bootstrap-icons.min.css') ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
         /* ========================================================= */
@@ -43,10 +44,78 @@
         }
 
         <?php 
+        $isLoggedIn       = (session()->get('logged_in') === true) || (session()->get('isLoggedIn') === true);
+        $isPublic         = !empty($isPublic) || !$isLoggedIn;
+        $canEdit          = !$isPublic;
+        $editableAttr     = $canEdit ? 'contenteditable="true"' : 'contenteditable="false"';
         $currentOrientasi = $template['orientasi'] ?? 'landscape';
         $currentTipe      = $template['tipe'] ?? 'overlay';
         $isLandscape      = ($currentOrientasi === 'landscape');
         ?>
+
+        /* Mode Publik & Keamanan Anti-Edit / Tamper Protection */
+        body.is-public-view .cert-editable-field,
+        .cert-editable-field[contenteditable="false"] {
+            cursor: default !important;
+            outline: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            pointer-events: none !important;
+            user-select: text;
+        }
+        body.is-public-view .cert-drag-item {
+            cursor: default !important;
+            user-select: text !important;
+            pointer-events: auto !important;
+        }
+        body.is-public-view .cert-drag-item:hover,
+        body.is-public-view .cert-drag-item.is-dragging,
+        body.is-public-view .cert-drag-item.is-active-target {
+            outline: none !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+        body.is-public-view .cert-drag-item::before {
+            display: none !important;
+        }
+        body.is-public-view #modalDirectEditData,
+        body.is-public-view #editDataPanel,
+        body.is-public-view #btnToggleEditData,
+        body.is-public-view #btnToggleDrag,
+        body.is-public-view #btnToggleAdjuster,
+        body.is-public-view #dragModeToolbar,
+        body.is-public-view #adjusterPanel,
+        body.is-public-view .drag-floating-bar {
+            display: none !important;
+        }
+
+        body.drag-mode-active .cert-drag-item {
+            cursor: grab !important;
+            user-select: none !important;
+            pointer-events: auto !important;
+        }
+        body.drag-mode-active .cert-drag-item.is-dragging {
+            cursor: grabbing !important;
+        }
+        body.drag-mode-active .cert-drag-item img {
+            pointer-events: none !important;
+            -webkit-user-drag: none !important;
+            user-select: none !important;
+        }
+
+        /* Subtle Anti-Counterfeit Background Security Motif (Guilloche Mesh) */
+        .piagam-sheet::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 4;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(2, 132, 199, 0.015) 0%, transparent 65%),
+                repeating-linear-gradient(45deg, rgba(15, 23, 42, 0.007) 0px, rgba(15, 23, 42, 0.007) 1px, transparent 1px, transparent 14px),
+                repeating-linear-gradient(-45deg, rgba(15, 23, 42, 0.007) 0px, rgba(15, 23, 42, 0.007) 1px, transparent 1px, transparent 14px);
+            opacity: 0.9;
+        }
 
         @page {
             size: <?= $isLandscape ? '330mm 215mm' : '215mm 330mm' ?>;
@@ -650,98 +719,169 @@
             flex-shrink: 0;
         }
 
-        /* --- KHUSUS USIA DINI (KU 5, 6, 7 / BACKGROUND DENGAN TROPHY DI KIRI) --- */
+        /* --- KHUSUS USIA DINI 5, 6, 7 TH (TEMPLATE 22 & USIA DINI) --- */
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-content-wrapper {
-            top: 24mm;
-            left: 36mm;
-            right: 14mm;
-            bottom: 42mm;
+            top: 30mm;
+            left: 48mm;
+            right: 12mm;
+            bottom: 25mm;
             align-items: center;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-top-header {
-            margin-bottom: 1.5mm;
+            margin-bottom: 4mm;
+            margin-left: 0;
+            text-align: center;
+            width: 100%;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-header-line {
-            font-size: 13.5px;
-            letter-spacing: 1.1px;
-            line-height: 1.25;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            line-height: 1.35;
+            color: #0b1a30;
+            text-align: center;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-title-box {
-            margin-bottom: 2mm;
+            margin-bottom: 3.5mm;
+            margin-left: 0;
+            text-align: center;
+            width: 100%;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-title-text {
-            font-size: 28px !important;
-            letter-spacing: 2px !important;
-            margin-bottom: 1mm;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px !important;
+            font-weight: 900 !important;
+            letter-spacing: 3px !important;
+            color: #0b1a30 !important;
+            margin-bottom: 1.5mm;
+            text-align: center;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-nomor-line {
-            font-size: 13px;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #004085;
+            text-align: center;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-intro-p {
-            font-size: 12px !important;
+            font-size: 14px !important;
             line-height: 1.45;
-            max-width: 480px;
-            margin-bottom: 2.5mm !important;
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 4mm !important;
+            margin-left: 0;
+            text-align: center;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-list {
+            display: inline-flex;
+            flex-direction: column;
             width: auto;
-            min-width: 440px;
-            max-width: 540px;
-            margin: 0 auto 3mm auto;
+            max-width: 100%;
+            margin: 0 auto 4mm auto !important;
             padding: 0;
             box-sizing: border-box;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row {
-            padding: 2.5px 6px;
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .lbl {
-            width: 115px;
-            font-size: 14px;
+            width: 125px;
+            font-size: 16px;
             font-weight: 700;
+            color: #111827;
+            text-align: left;
+            flex-shrink: 0;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .sep {
             width: 16px;
-            font-size: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+            text-align: center;
+            flex-shrink: 0;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .val {
-            font-size: 14.5px;
+            font-size: 16.5px;
             white-space: nowrap;
+            color: #000000;
+            text-align: left;
+            flex: 1;
+            padding-left: 4px;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-data-row .val-nama {
-            font-size: 20px;
+            font-size: 26px;
             font-weight: 900;
             white-space: nowrap;
             letter-spacing: 0.5px;
+            color: #000000;
         }
 
         .piagam-sheet.is-usia-567.sheet-portrait .overlay-closing-p {
-            font-size: 11.5px !important;
+            font-size: 13px !important;
             line-height: 1.45;
-            max-width: 490px;
+            width: 100%;
+            max-width: 100%;
             margin: 0 auto;
+            text-align: center;
         }
 
-        .piagam-sheet.is-usia-567.sheet-portrait .portrait-official-signature-center {
-            bottom: 11% !important;
-            left: 55% !important;
+        .piagam-sheet.is-usia-567.sheet-portrait .portrait-official-signature-center,
+        .piagam-sheet.is-usia-567.sheet-portrait .sig-container-single-pekalongan {
+            bottom: 5.5% !important;
+            left: 58.5% !important;
             transform: translateX(-50%) !important;
-            width: 280px;
+            width: 400px !important;
+            text-align: center;
         }
 
-        .piagam-sheet.is-usia-567.sheet-portrait .sig-unit-img {
-            max-height: 68px;
+        .piagam-sheet.is-usia-567.sheet-portrait .sig-unit-title,
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-sig-title {
+            font-size: 15.5px !important;
+            line-height: 1.35 !important;
+            text-align: center !important;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .sig-unit-name,
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-sig-name {
+            font-size: 16.5px !important;
+            margin-top: 0 !important;
+            text-align: center !important;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .sig-unit-img,
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-sig-img {
+            height: 170px !important;
+            max-height: 175px !important;
+            width: auto !important;
+            max-width: 380px !important;
+            object-fit: contain !important;
+            margin: 0 auto !important;
+        }
+
+        .piagam-sheet.is-usia-567.sheet-portrait .sig-unit-img-box,
+        .piagam-sheet.is-usia-567.sheet-portrait .overlay-sig-img-box {
+            height: 170px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: -14px auto -10px auto !important;
         }
 
         .overlay-data-row .val {
@@ -2042,7 +2182,7 @@
             if ($x !== 0 || $y !== 0):
             ?>
                 .piagam-sheet:not(.is-usia-567) .cert-drag-item[data-drag-key="<?= esc($k) ?>"] {
-                    transform: translate(<?= $x ?>px, <?= $y ?>px);
+                    transform: translate(<?= $x ?>px, <?= $y ?>px) !important;
                 }
             <?php endif; ?>
         <?php endforeach; ?>
@@ -2069,7 +2209,7 @@
             if ($x !== 0 || $y !== 0):
             ?>
                 .piagam-sheet.is-usia-567 .cert-drag-item[data-drag-key="<?= esc($k) ?>"] {
-                    transform: translate(<?= $x ?>px, <?= $y ?>px);
+                    transform: translate(<?= $x ?>px, <?= $y ?>px) !important;
                 }
             <?php endif; ?>
         <?php endforeach; ?>
@@ -2084,10 +2224,61 @@
     <?php endif; ?>
     </style>
 </head>
-<body>
+<body class="<?= $isPublic ? 'is-public-view' : 'is-admin-view' ?>">
 
 <!-- Floating Print & Theme Switcher Toolbar -->
-<div class="print-toolbar">
+<div class="print-toolbar <?= $isPublic ? 'is-public-toolbar' : '' ?>">
+<?php if ($isPublic): ?>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary px-3 py-1.5 rounded-pill d-inline-flex align-items-center gap-1.5 fw-bold shadow-sm" style="font-size: 0.85rem;">
+            <i class="bi bi-patch-check-fill text-warning"></i> E-PIAGAM RESMI TERVERIFIKASI
+        </span>
+        <?php if (!empty($sekolah['nama'])): ?>
+            <span class="text-white fw-bold d-none d-md-inline" style="font-size: 0.95rem;">
+                <i class="bi bi-building me-1 text-warning"></i> <?= esc($sekolah['nama']) ?>
+            </span>
+        <?php endif; ?>
+    </div>
+
+    <span class="border-start border-secondary h-50 mx-1"></span>
+
+    <!-- Selector Ukuran Kertas: F4 (Folio 215x330mm) vs A4 (210x297mm) -->
+    <div class="d-flex align-items-center gap-1">
+        <span class="small text-white-50 fw-semibold d-none d-md-inline text-nowrap">
+            <i class="bi bi-aspect-ratio text-info me-1"></i> Kertas:
+        </span>
+        <select id="paperSizeSwitcher" class="form-select form-select-sm fw-bold border-info bg-dark text-info rounded-pill px-2 shadow-sm" style="width: auto; min-width: 140px;" onchange="switchPaperSize(this.value)" title="Pilih ukuran kertas cetak: F4 / Folio (215x330mm) atau A4 (210x297mm)">
+            <option value="F4" selected>📄 F4 (215×330 mm)</option>
+            <option value="A4">📄 A4 (210×297 mm)</option>
+        </select>
+    </div>
+
+    <span class="border-start border-secondary h-50 mx-1"></span>
+
+    <span class="small fw-semibold text-warning">
+        <i class="bi bi-award-fill me-1"></i>
+        <?= count($piagamList) ?> Sertifikat
+    </span>
+
+    <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow" title="Cetak langsung ke mesin printer">
+        <i class="bi bi-printer-fill text-warning"></i>
+        <span>Print</span>
+    </button>
+
+    <?php if (!empty($sekolah['id'])): ?>
+        <a href="<?= base_url('piagam/download-sekolah-pdf/' . $sekolah['id']) ?>" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow" id="btnDownloadPdf" title="Unduh berkas PDF piagam resmi langsung (Pure Download)">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+            <span id="btnDownloadPdfText">Download PDF</span>
+        </a>
+    <?php else: ?>
+        <button type="button" onclick="downloadCertificatePdf()" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow" id="btnDownloadPdf" title="Unduh berkas PDF piagam resmi ke perangkat Anda">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+            <span id="btnDownloadPdfText">Download PDF</span>
+        </button>
+    <?php endif; ?>
+
+<!-- Mode Geser Elemen / Pemindahan dinonaktifkan pada mode publik / sekolah -->
+<?php else: ?>
     <a href="<?= base_url('piagam') ?>" class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-1 rounded-pill px-3">
         <i class="bi bi-arrow-left"></i> Kembali
     </a>
@@ -2096,8 +2287,25 @@
 
     <!-- Format Template Aktif Selector -->
     <?php 
-    $activeTpls = array_filter($templates ?? [], function($t) {
-        return !empty($t['is_active']);
+    $firstItem = $piagamList[0] ?? [];
+    $isCurrentUsia567 = false;
+    $firstKuCheck = strtolower(($firstItem['kategori_usia'] ?? '') . ' ' . ($firstItem['nomor_lomba'] ?? ''));
+    if (preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $firstKuCheck)) {
+        $isCurrentUsia567 = true;
+    }
+    if (isset($firstItem['hanya_ketua_pekalongan'])) {
+        $isCurrentUsia567 = (bool)$firstItem['hanya_ketua_pekalongan'];
+    }
+
+    $activeTpls = array_filter($templates ?? [], function($t) use ($isCurrentUsia567) {
+        if (empty($t['is_active'])) return false;
+        if ($isCurrentUsia567) {
+            // Khusus event Usia Dini: HANYA tampilkan Template 22
+            return (int)$t['id'] === 22;
+        } else {
+            // Selain Usia Dini: JANGAN tampilkan Template 22
+            return (int)$t['id'] !== 22;
+        }
     });
     if (empty($activeTpls)) {
         $activeTpls = $templates ?? [];
@@ -2172,13 +2380,20 @@
         <?= count($piagamList) ?> Lembar
     </span>
 
-    <button type="button" onclick="window.print()" class="btn btn-sm btn-warning fw-bold d-inline-flex align-items-center gap-2 px-3 rounded-pill shadow">
-        <i class="bi bi-printer-fill fs-6"></i>
-        <span>Cetak (Print / PDF)</span>
+    <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow" title="Cetak langsung ke mesin printer">
+        <i class="bi bi-printer-fill text-warning"></i>
+        <span>Print</span>
     </button>
+
+    <button type="button" onclick="downloadCertificatePdf()" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow" id="btnDownloadPdfAdmin" title="Unduh berkas PDF piagam resmi ke perangkat Anda">
+        <i class="bi bi-download"></i>
+        <span>Download PDF</span>
+    </button>
+<?php endif; ?>
 </div>
 
-<!-- Floating Toolbar Khusus Saat Mode Geser Elemen Aktif -->
+<?php if (!$isPublic): ?>
+<!-- Floating Toolbar Khusus Saat Mode Geser Elemen Aktif (Hanya untuk Admin) -->
 <div id="dragModeToolbar" class="drag-floating-bar" style="display: none; max-width: 98vw; width: auto;">
     <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap justify-content-center">
         <div class="d-flex align-items-center gap-2 text-white">
@@ -2260,7 +2475,7 @@
 
         <div class="vr bg-secondary opacity-50 my-1 d-none d-md-block"></div>
 
-        <button type="button" class="btn btn-sm btn-success fw-bold px-3 rounded-pill shadow-sm" onclick="saveCustomDragOffsets()">
+        <button type="button" class="btn btn-sm btn-success fw-bold px-3 rounded-pill shadow-sm" onclick="saveCustomDragOffsets(event)">
             <i class="bi bi-check2-circle me-1"></i> Simpan
         </button>
 
@@ -2297,7 +2512,7 @@
 
         <!-- Offset TTD Bawah -->
         <div class="col-auto">
-            <label class="small text-white-50 d-block mb-1">✍️ Naik/Turun TTD & Stempel:</label>
+            <label class="small text-white-50 d-block mb-1"><i class="bi bi-pen-fill text-warning me-1"></i> Naik/Turun TTD & Stempel:</label>
             <div class="input-group input-group-sm" style="width: 140px;">
                 <button type="button" class="btn btn-secondary px-2" onclick="changeOffset('ttd', -2)">-</button>
                 <input type="number" id="live_offset_ttd" class="form-control text-center bg-dark text-white fw-bold" value="<?= (int)($template['offset_ttd'] ?? 0) ?>" oninput="applyLiveOffset()" onchange="applyLiveOffset()" onkeyup="applyLiveOffset()">
@@ -2308,7 +2523,7 @@
 
         <!-- Ukuran Font Nama -->
         <div class="col-auto">
-            <label class="small text-white-50 d-block mb-1">📏 Ukuran Nama Atlet:</label>
+            <label class="small text-white-50 d-block mb-1"><i class="bi bi-fonts text-info me-1"></i> Ukuran Nama Atlet:</label>
             <div class="input-group input-group-sm" style="width: 130px;">
                 <button type="button" class="btn btn-secondary px-2" onclick="changeOffset('nama', -1)">-</button>
                 <input type="number" id="live_font_nama" class="form-control text-center bg-dark text-white fw-bold" value="<?= (int)($template['font_size_nama'] ?: 26) ?>" oninput="applyLiveOffset()" onchange="applyLiveOffset()" onkeyup="applyLiveOffset()">
@@ -2319,7 +2534,7 @@
 
         <!-- Ukuran TTD & Stempel -->
         <div class="col-auto">
-            <label class="small text-white-50 d-block mb-1">🏷️ Ukuran Stempel & TTD:</label>
+            <label class="small text-white-50 d-block mb-1"><i class="bi bi-aspect-ratio text-warning me-1"></i> Ukuran Stempel & TTD:</label>
             <div class="input-group input-group-sm" style="width: 140px;">
                 <button type="button" class="btn btn-secondary px-2" onclick="changeOffset('stempel', -5)">-</button>
                 <input type="number" id="live_stempel_size" class="form-control text-center bg-dark text-white fw-bold" value="130" oninput="applyLiveOffset()" onchange="applyLiveOffset()" onkeyup="applyLiveOffset()">
@@ -2348,6 +2563,7 @@
         </div>
     </div>
 </div>
+<?php endif; /* end if !$isPublic for drag & adjuster toolbars */ ?>
 
 <?php
 // Helper functions khusus pemformatan Usia Dini 5, 6, 7 Tahun sesuai regulasi panitia
@@ -2357,46 +2573,92 @@ if (!function_exists('formatNomorPiagam567')) {
         $nomor = preg_replace('/PASI\.?JATENG/i', 'PASI.KOTA', $nomor);
         $nomor = preg_replace('/\/SERT\//i', '/sert/', $nomor);
         if (!preg_match('/PASI\.KOTA/i', $nomor)) {
-            $nomorUrut = str_pad(preg_replace('/\D/', '', $nomor) ?: ($idx + 1), 3, '0', STR_PAD_LEFT);
-            return "{$nomorUrut}/sert/PASI.KOTA/IX/2026";
+            return "001/sert/PASI.KOTA/IX/2026";
         }
-        return $nomor;
+        // Pastikan nomor induk sertifikat selalu stabil 001 (tidak urut 002/003)
+        return preg_replace('/^\d+\//', '001/', $nomor);
     }
 }
 
 if (!function_exists('formatNomorLomba567')) {
-    function formatNomorLomba567($rawLomba) {
+    function formatNomorLomba567($rawLomba, $usiaSpecific = '') {
         if (empty($rawLomba)) return '';
         $clean = preg_replace('/juaraku\s*/i', '', $rawLomba);
-        $clean = preg_replace('/\bu[\s\-_]?5\b|\bku[\s\-_]?5\b/i', 'usia 5 tahun', $clean);
-        $clean = preg_replace('/\bu[\s\-_]?6\b|\bku[\s\-_]?6\b/i', 'usia 6 tahun', $clean);
-        $clean = preg_replace('/\bu[\s\-_]?7\b|\bku[\s\-_]?7\b/i', 'usia 7 tahun', $clean);
-        $clean = preg_replace('/\bfemale\b/i', 'putri', $clean);
-        $clean = preg_replace('/\bmale\b/i', 'putra', $clean);
-        $clean = preg_replace('/\bPutri\b/i', 'putri', $clean);
-        $clean = preg_replace('/\bPutra\b/i', 'putra', $clean);
-        return trim(preg_replace('/\s+/', ' ', $clean));
+        $clean = preg_replace('/\bu[\s\-_]?5\b|\bku[\s\-_]?5\b/i', 'Usia 5 Tahun', $clean);
+        $clean = preg_replace('/\bu[\s\-_]?6\b|\bku[\s\-_]?6\b/i', 'Usia 6 Tahun', $clean);
+        $clean = preg_replace('/\bu[\s\-_]?7\b|\bku[\s\-_]?7\b/i', 'Usia 7 Tahun', $clean);
+        $clean = preg_replace('/\bfemale\b/i', 'Putri', $clean);
+        $clean = preg_replace('/\bmale\b/i', 'Putra', $clean);
+        $clean = preg_replace('/\bPutri\b/i', 'Putri', $clean);
+        $clean = preg_replace('/\bPutra\b/i', 'Putra', $clean);
+        $res = trim(preg_replace('/\s+/', ' ', $clean));
+
+        // Format keterangan usia spesifik pada nomor lomba di bawah nama anak
+        if (in_array($usiaSpecific, ['5', '6', '7'])) {
+            if (!preg_match('/usia\s*[567]\s*tahun/i', $res)) {
+                $res = preg_replace('/\b(ku|u)?\s*[\(\[]?\s*5\s*[-/&]\s*[67]\s*[\)\]]?\b/i', '', $res);
+                $res = preg_replace('/\b567\b/i', '', $res);
+                $res = trim(preg_replace('/\s+/', ' ', $res));
+
+                if (preg_match('/^(.*?)\s*(putra|putri)(.*)$/i', $res, $m)) {
+                    $res = trim($m[1]) . " Usia {$usiaSpecific} Tahun " . ucfirst(strtolower($m[2])) . (trim($m[3]) ? ' ' . trim($m[3]) : '');
+                } else {
+                    $res .= " Usia {$usiaSpecific} Tahun";
+                }
+            }
+        } elseif ($usiaSpecific === '567') {
+            if (!preg_match('/usia\s*[567]/i', $res)) {
+                if (preg_match('/^(.*?)\s*(putra|putri)(.*)$/i', $res, $m)) {
+                    $res = trim($m[1]) . " Usia 5, 6, 7 Tahun " . ucfirst(strtolower($m[2])) . (trim($m[3]) ? ' ' . trim($m[3]) : '');
+                } else {
+                    $res .= " Usia 5, 6, 7 Tahun";
+                }
+            }
+        }
+
+        return trim(preg_replace('/\s+/', ' ', $res));
     }
 }
 
 if (!function_exists('formatPrestasiPiagam')) {
-    function formatPrestasiPiagam($rawPrestasi, $nomorLomba = '') {
+    function formatPrestasiPiagam($rawPrestasi, $nomorLomba = '', $satuan = '') {
         $p = trim((string)$rawPrestasi);
-        if ($p === '') {
-            return '0:00.00';
-        }
 
         $upper = strtoupper($p);
         if (in_array($upper, ['DQ', 'DNS', 'DNF', 'NM', 'DISK', 'DISQ'])) {
             return $upper;
         }
 
-        if (in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
-            return '0:00.00';
+        // Cek apakah nomor lapangan (Jarak / Meter: Tolak Peluru, Lempar Lembing, Lempar Cakram, Lompat Jauh, dsb)
+        $isField = false;
+        $satuanLower = strtolower(trim((string)$satuan));
+        $lombaLower = strtolower(trim((string)$nomorLomba));
+
+        if (in_array($satuanLower, ['jarak', 'meter', 'm'])) {
+            $isField = true;
+        } elseif (preg_match('/(lompat|peluru|lembing|cakram|martil|jump|shot|javelin|discus|hammer)/i', $lombaLower)) {
+            $isField = true;
         }
 
-        // Hapus satuan di ujung seperti m, meter, jarak, dtk, detik, s
-        $cleaned = trim(preg_replace('/\s*(m|meter|jarak|dtk|detik|s)$/i', '', $p));
+        if ($isField) {
+            // Untuk nomor lapangan (meter): tampilkan angka desimal 0.00 langsung saja (tanpa ' m' dan jangan 0:00:00)
+            if ($p === '' || in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
+                return '0.00';
+            }
+            $cleaned = trim(preg_replace('/\s*(m|meter|jarak)$/i', '', $p));
+            $cleaned = preg_replace('/^0+:/', '', $cleaned);
+            if (is_numeric($cleaned)) {
+                return number_format((float)$cleaned, 2, '.', '');
+            }
+            return $cleaned;
+        }
+
+        if ($p === '' || in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
+            return '-';
+        }
+
+        // Untuk nomor lintasan / lari (waktu)
+        $cleaned = trim(preg_replace('/\s*(dtk|detik|s)$/i', '', $p));
 
         // Format waktu yang sudah memiliki menit:detik misal 23:28.00 atau 3:44.00 atau 0:06.48
         if (preg_match('/^(\d+):(\d{2})(\.\d{1,2})?$/', $cleaned, $m)) {
@@ -2447,7 +2709,7 @@ if ($firstIs567) {
     $firstLomba = $firstItem['nomor_lomba'] ?? 'Lari 100 M KU 16-18 Putra';
 }
 // Format prestasi berlaku untuk SELURUH nomor lomba
-$firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba);
+$firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba, $firstItem['satuan'] ?? '');
 ?>
 <div id="editDataPanel" class="adjuster-floating-panel" style="display: none; width: 720px; max-width: 96vw; background: rgba(15, 23, 42, 0.98); border: 2px solid #F59E0B; box-shadow: 0 20px 45px rgba(0,0,0,0.7); border-radius: 14px;">
     <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary">
@@ -2531,19 +2793,19 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="radio" name="live_ttd_mode" id="live_ttd_auto" value="auto" checked onchange="updateLiveTtdFormat(this.value)">
                     <label class="form-check-label small text-white" for="live_ttd_auto">
-                        ⚡ <strong>Otomatis</strong> (Usia 5,6,7 th = Hanya Ketua PASI Pekalongan, Lainnya = Triple)
+                        <i class="bi bi-lightning-charge-fill text-warning me-1"></i> <strong>Otomatis</strong> (Usia 5,6,7 th = Hanya Ketua PASI Pekalongan, Lainnya = Triple)
                     </label>
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="radio" name="live_ttd_mode" id="live_ttd_single" value="single_pekalongan" onchange="updateLiveTtdFormat(this.value)">
                     <label class="form-check-label small text-warning fw-bold" for="live_ttd_single">
-                        👤 <strong>Hanya Ketua PASI Kota Pekalongan</strong> (Usia 5, 6, 7 th)
+                        <i class="bi bi-person-fill text-warning me-1"></i> <strong>Hanya Ketua PASI Kota Pekalongan</strong> (Usia 5, 6, 7 th)
                     </label>
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="radio" name="live_ttd_mode" id="live_ttd_triple" value="triple" onchange="updateLiveTtdFormat(this.value)">
                     <label class="form-check-label small text-white" for="live_ttd_triple">
-                        👥 <strong>Triple Signatures</strong> (Korwil + Panitia + PASI Jateng)
+                        <i class="bi bi-people-fill text-info me-1"></i> <strong>Triple Signatures</strong> (Korwil + Panitia + PASI Jateng)
                     </label>
                 </div>
             </div>
@@ -2570,8 +2832,9 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
 <!-- Loop Lembar Piagam Penghargaan -->
 <?php foreach ($piagamList as $idx => $item): ?>
     <?php 
-    // Bersihkan nomor dari kemungkinan awalan "NO :" berulang
+    // Bersihkan nomor dari kemungkinan awalan "NO :" berulang & pastikan nomor induk selalu stabil 001 (tidak urut 002/003)
     $cleanNomor = trim(preg_replace('/^(NO|NOMOR)\s*:\s*/i', '', $item['nomor_piagam']));
+    $cleanNomor = preg_replace('/^\d+\//', '001/', $cleanNomor);
 
     // Deteksi apakah nomor acara / kategori ini adalah Usia Dini 5, 6, 7 tahun (U 5, U 6, U 7 / KU 5-6 / JuarAKU)
     // Sesuai instruksi:
@@ -2608,36 +2871,26 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
             $usiaSpecific = '7';
         }
 
-        if ($usiaSpecific === '5') {
-            $usiaLabelHeader = "USIA DINI 5TH";
-            $usiaLabelPenutup = "Usia Dini 5th";
-        } elseif ($usiaSpecific === '6') {
-            $usiaLabelHeader = "USIA DINI 6TH";
-            $usiaLabelPenutup = "Usia Dini 6th";
-        } elseif ($usiaSpecific === '7') {
-            $usiaLabelHeader = "USIA DINI 7TH";
-            $usiaLabelPenutup = "Usia Dini 7th";
-        } else {
-            $usiaLabelHeader = "USIA DINI 5,6,7TH";
-            $usiaLabelPenutup = "Usia Dini 5,6,7th";
-        }
+        // Judul atas & kalimat penutup selalu Usia Dini 5, 6, 7 Tahun sesuai permintaan user
+        $usiaLabelHeader = "USIA DINI 5, 6, 7 TAHUN";
+        $usiaLabelPenutup = "Usia Dini 5, 6, 7 Tahun";
 
         $displayHeaderLines = [
             "KEJUARAAN",
             "ATLETIK",
             $usiaLabelHeader,
-            "TAHUN " . ($item['tahun'] ?? '2026')
+            "TAHUN " . esc($item['tahun'] ?? '2026')
         ];
         $cleanNomor = formatNomorPiagam567($cleanNomor, $idx);
         $displayKalimatPembuka = "Pengurus Kota Persatuan Atletik Seluruh Indonesia (PASI) Kota Pekalongan dengan ini memberikan Piagam Penghargaan kepada :";
-        $displayNomorLomba = formatNomorLomba567($item['nomor_lomba'] ?? '');
-        $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba);
+        $displayNomorLomba = formatNomorLomba567($item['nomor_lomba'] ?? '', $usiaSpecific);
+        $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba, $item['satuan'] ?? '');
         $displayKalimatPenutup = "dalam Kejuaraan Atletik {$usiaLabelPenutup} Tingkat Kota Pekalongan, Kab. Pekalongan, dan Kab. Batang yang diselenggarakan tanggal 27 September 2026 di Stadion Hoegeng Kota Pekalongan.";
     } else {
         $displayHeaderLines = explode("\n", trim($template['instansi_header'] ?: "PENGURUS PROVINSI PERSATUAN ATLETIK\nSELURUH INDONESIA\nJAWA TENGAH"));
         $displayKalimatPembuka = $template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan ini memberikan Piagam Penghargaan kepada :';
         $displayNomorLomba = $item['nomor_lomba'];
-        $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba);
+        $displayPrestasi = formatPrestasiPiagam($item['prestasi'] ?? '', $displayNomorLomba, $item['satuan'] ?? '');
         $tglStr = $item['tanggal'] ?: '27 September 2026';
         $tmptStr = $item['tempat'] ?: 'Stadion Hoegeng Kota Pekalongan';
         $displayKalimatPenutup = $template['kalimat_penghargaan'] ? str_replace(['{tanggal}', '{tempat}'], [$tglStr, $tmptStr], $template['kalimat_penghargaan']) : "dalam Kejuaraan Atletik Tingkat Eks Karesidenan Pekalongan yang diselenggarakan pada tanggal {$tglStr} di {$tmptStr}.";
@@ -2732,26 +2985,26 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
                 
                 <!-- ZONA 1: NOMOR PIAGAM (Tepat di bawah SERTIFIKAT PENGHARGAAN, di atas garis ornamen emas) -->
                 <div class="canva-zone-nomor cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">
-                    NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
+                    NOMOR : <span class="cert-live-nomor cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
                 </div>
 
                 <!-- ZONA 2: NAMA ATLET & KONTINGEN (Di ruang lapang antara "Dengan Bangga Diberikan Kepada" dan "Telah Meraih") -->
                 <div class="canva-zone-athlete cert-drag-item" data-drag-key="nama" data-drag-name="Nama Atlet & Asal">
-                    <div class="canva-athlete-name cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama atlet/peserta" style="font-size: <?= (int)($template['font_size_nama'] ?: 27) ?>px;">
+                    <div class="canva-athlete-name cert-live-nama cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit nama atlet/peserta" style="font-size: <?= (int)($template['font_size_nama'] ?: 27) ?>px;">
                         <?= esc($item['nama_pemenang']) ?>
                     </div>
                 </div>
 
                 <!-- ZONA 3: JUARA (TEPAT DI DALAM PITA EMAS CANVA / DISEIMBANGKAN SEMPURNA) -->
                 <div class="canva-zone-ribbon cert-drag-item" data-drag-key="juara" data-drag-name="Gelar Juara">
-                    <span class="cert-live-juara-ribbon cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit gelar juara">★ JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) ★</span>
+                    <span class="cert-live-juara-ribbon cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit gelar juara">★ JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) ★</span>
                 </div>
 
                 <!-- ZONA 4: NOMOR LOMBA & PRESTASI (Tepat di bawah pita emas) -->
                 <div class="canva-zone-event cert-drag-item" data-drag-key="lomba" data-drag-name="Nomor Lomba">
-                    <span class="cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit lomba"><?= esc($displayNomorLomba) ?></span>
+                    <span class="cert-live-lomba cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit lomba"><?= esc($displayNomorLomba) ?></span>
                     <?php if (!empty($displayPrestasi) && $displayPrestasi !== '-'): ?>
-                        <span class="ms-1">&bull; Prestasi: <strong class="cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit prestasi"><?= esc($displayPrestasi) ?></strong></span>
+                        <span class="ms-1">&bull; Prestasi: <strong class="cert-live-prestasi cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit prestasi"><?= esc($displayPrestasi) ?></strong></span>
                     <?php endif; ?>
                 </div>
 
@@ -2780,7 +3033,7 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
 
                     <div class="overlay-title-box">
                         <div class="overlay-title-text cert-drag-item" data-drag-key="judul" data-drag-name="Judul Piagam"><?= esc($template['judul'] ?: 'PIAGAM PENGHARGAAN') ?></div>
-                        <div class="overlay-nomor-line cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span></div>
+                        <div class="overlay-nomor-line cert-drag-item" data-drag-key="nomor" data-drag-name="Nomor Piagam">NOMOR : <span class="cert-live-nomor cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span></div>
                     </div>
 
                     <p class="overlay-intro-p cert-drag-item" data-drag-key="pembuka" data-drag-name="Kalimat Pembuka">
@@ -2791,22 +3044,22 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_nama" data-drag-name="Nama Atlet">
                             <span class="lbl">Nama</span>
                             <span class="sep">:</span>
-                            <span class="val val-nama cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama peserta" style="font-size: <?= (int)($template['font_size_nama'] ?: 16.5) ?>px;"><?= esc($item['nama_pemenang']) ?></span>
+                            <span class="val val-nama cert-live-nama cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit nama peserta" style="font-size: <?= (int)($template['font_size_nama'] ?: 16.5) ?>px;"><?= esc($item['nama_pemenang']) ?></span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_lomba" data-drag-name="Nomor Lomba">
                             <span class="lbl">Nomor Lomba</span>
                             <span class="sep">:</span>
-                            <span class="val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($displayNomorLomba) ?></span>
+                            <span class="val cert-live-lomba cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit lomba"><?= esc($displayNomorLomba) ?></span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_juara" data-drag-name="Sebagai Juara">
                             <span class="lbl">Sebagai Juara</span>
                             <span class="sep">:</span>
-                            <span class="val cert-live-juara cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit juara"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</span>
+                            <span class="val cert-live-juara cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit juara"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</span>
                         </div>
                         <div class="overlay-data-row cert-drag-item" data-drag-key="row_prestasi" data-drag-name="Prestasi">
                             <span class="lbl">Prestasi</span>
                             <span class="sep">:</span>
-                            <span class="val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($displayPrestasi) ?></span>
+                            <span class="val cert-live-prestasi cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit prestasi"><?= esc($displayPrestasi) ?></span>
                         </div>
                     </div>
 
@@ -2845,7 +3098,7 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
 
                         <!-- TTD 2: Ketua Panitia (Kanan Atas) -->
                         <div class="sig-unit cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
-                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                             <div class="sig-unit-img-box">
                                 <?php if ($url2): ?>
                                     <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="sig-unit-img">
@@ -2903,7 +3156,7 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
 
                     <!-- TTD 2: Ketua Panitia -->
                     <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
-                        <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                        <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                         <div class="overlay-sig-img-box">
                             <?php if ($url2): ?>
                                 <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -2991,7 +3244,7 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -3002,7 +3255,7 @@ $firstPrestasi = formatPrestasiPiagam($firstItem['prestasi'] ?? '', $firstLomba)
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -3014,8 +3267,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -3092,7 +3345,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -3103,7 +3356,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -3115,8 +3368,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -3193,7 +3446,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -3204,7 +3457,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -3216,8 +3469,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -3293,7 +3546,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -3304,7 +3557,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -3316,8 +3569,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -3390,7 +3643,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -3401,7 +3654,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -3413,8 +3666,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -3490,7 +3743,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -3501,7 +3754,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -3513,8 +3766,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -3594,7 +3847,7 @@ PLT PASI Jateng")) ?></div>
                         PIAGAM<br>PENGHARGAAN
                     </div>
                     <div class="portrait-banner-nomor">
-                        NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
+                        NOMOR : <span class="cert-live-nomor cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
                     </div>
                 </div>
 
@@ -3614,22 +3867,22 @@ PLT PASI Jateng")) ?></div>
                         <tr class="cert-drag-item" data-drag-key="row_nama" data-drag-name="Nama Atlet">
                             <td class="td-label">Nama</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val val-nama cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama"><?= esc($item['nama_pemenang']) ?></td>
+                            <td class="td-val val-nama cert-live-nama cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit nama"><?= esc($item['nama_pemenang']) ?></td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_lomba" data-drag-name="Nomor Lomba">
                             <td class="td-label">Nomor Lomba</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba"><?= esc($displayNomorLomba) ?></td>
+                            <td class="td-val cert-live-lomba cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit lomba"><?= esc($displayNomorLomba) ?></td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_juara" data-drag-name="Sebagai Juara">
                             <td class="td-label">Sebagai Juara</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-juara cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit juara"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</td>
+                            <td class="td-val cert-live-juara cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit juara"><?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>)</td>
                         </tr>
                         <tr class="cert-drag-item" data-drag-key="row_prestasi" data-drag-name="Prestasi">
                             <td class="td-label">Prestasi</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi"><?= esc($displayPrestasi) ?></td>
+                            <td class="td-val cert-live-prestasi cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit prestasi"><?= esc($displayPrestasi) ?></td>
                         </tr>
                     </table>
 
@@ -3730,7 +3983,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
 
                         <div class="sig-unit cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
-                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="sig-unit-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                             <div class="sig-unit-img-box">
                                 <?php if ($url2): ?>
                                     <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="sig-unit-img">
@@ -3859,7 +4112,7 @@ PLT PASI Jateng")) ?></div>
                         PIAGAM<br>PENGHARGAAN
                     </div>
                     <div class="portrait-banner-nomor" style="color: #FDE68A !important; font-weight: 800; letter-spacing: 1.8px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
-                        NOMOR : <span class="cert-live-nomor cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
+                        NOMOR : <span class="cert-live-nomor cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit nomor piagam"><?= esc($cleanNomor) ?></span>
                     </div>
                 </div>
 
@@ -3879,18 +4132,18 @@ PLT PASI Jateng")) ?></div>
                         <tr>
                             <td class="td-label">Nama</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val val-nama cert-live-nama cert-editable-field" contenteditable="true" spellcheck="false" title="Klik langsung untuk edit nama" style="font-family: 'Cinzel', 'Montserrat', serif; font-size: <?= (int)($template['font_size_nama'] ?: 18) ?>px; font-weight: 900; color: #071E3D !important; letter-spacing: 1px;"><?= esc($item['nama_pemenang']) ?></td>
+                            <td class="td-val val-nama cert-live-nama cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik langsung untuk edit nama" style="font-family: 'Cinzel', 'Montserrat', serif; font-size: <?= (int)($template['font_size_nama'] ?: 18) ?>px; font-weight: 900; color: #071E3D !important; letter-spacing: 1px;"><?= esc($item['nama_pemenang']) ?></td>
                         </tr>
                         <tr>
                             <td class="td-label">Nomor Lomba</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-lomba cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit lomba" style="font-weight: 800; color: #0A2540;"><?= esc($displayNomorLomba) ?></td>
+                            <td class="td-val cert-live-lomba cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit lomba" style="font-weight: 800; color: #0A2540;"><?= esc($displayNomorLomba) ?></td>
                         </tr>
                         <tr>
                             <td class="td-label">Sebagai Juara</td>
                             <td class="td-sep">:</td>
                             <td class="td-val">
-                                <span class="portrait-prestige-juara-badge cert-live-juara-ribbon cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit juara">
+                                <span class="portrait-prestige-juara-badge cert-live-juara-ribbon cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit juara">
                                     ★ JUARA <?= $item['peringkat'] ?> (<?= strtoupper(esc($item['peringkat_teks'])) ?>) ★
                                 </span>
                             </td>
@@ -3898,7 +4151,7 @@ PLT PASI Jateng")) ?></div>
                         <tr>
                             <td class="td-label">Prestasi</td>
                             <td class="td-sep">:</td>
-                            <td class="td-val cert-live-prestasi cert-editable-field" contenteditable="true" spellcheck="false" title="Klik untuk edit prestasi" style="font-weight: 700; color: #0A2540;"><?= esc($displayPrestasi) ?></td>
+                            <td class="td-val cert-live-prestasi cert-editable-field" <?= $editableAttr ?> spellcheck="false" title="Klik untuk edit prestasi" style="font-weight: 700; color: #0A2540;"><?= esc($displayPrestasi) ?></td>
                         </tr>
                     </table>
 
@@ -3934,7 +4187,7 @@ PLT PASI Jateng")) ?></div>
                 <div class="portrait-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? 'display:block;' : 'display:none;' ?>">
                     <div class="sig-top-pair">
                         <!-- TTD 1: Korwil -->
-                        <div class="sig-unit">
+                        <div class="sig-unit cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                             <div class="sig-unit-title" style="color: #071E3D; font-weight: 700;"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                             <div class="sig-unit-img-box">
                                 <?php if ($url1): ?>
@@ -3944,9 +4197,9 @@ PLT PASI Jateng")) ?></div>
                             <div class="sig-unit-name" style="color: #071E3D; font-weight: 800;"><?= esc($template['ttd_1_nama'] ?: 'Jumanto, S.Pd., M.Si.') ?></div>
                         </div>
 
-                        <!-- TTD 2: Ketua Panitia -->
-                        <div class="sig-unit">
-                            <div class="sig-unit-title" style="color: #071E3D; font-weight: 700;"><?= nl2br(esc($template['ttd_2_jabatan'] ?: 'Ketua Panitia Pelaksana')) ?></div>
+                        <!-- TTD 2: Ketua Panitia / Ketua PASI -->
+                        <div class="sig-unit cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Ketua PASI (Kanan)">
+                            <div class="sig-unit-title" style="color: #071E3D; font-weight: 700;"><?= nl2br(esc($template['ttd_2_jabatan'] ?: 'Ketua PASI')) ?></div>
                             <div class="sig-unit-img-box">
                                 <?php if ($url2): ?>
                                     <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Panitia" class="sig-unit-img">
@@ -3957,7 +4210,7 @@ PLT PASI Jateng")) ?></div>
                     </div>
 
                     <!-- TTD 3: Mengetahui PASI Jateng (Tengah Bawah) -->
-                    <div class="sig-unit sig-unit-center">
+                    <div class="sig-unit sig-unit-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                         <div class="sig-unit-title" style="color: #071E3D; font-weight: 700;"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,\nPengurus Provinsi PASI Jawa Tengah\nPlt. Ketua Umum")) ?></div>
                         <div class="sig-unit-img-box">
                             <?php if ($url3): ?>
@@ -4098,7 +4351,7 @@ PLT PASI Jateng")) ?></div>
                 <!-- BODY SECTION: PENERIMA & PRESTASI JUARA -->
                 <div class="fed-body-section">
                     <div class="fed-intro-text">
-                        <?= esc($template['kalimat_pembuka'] ?: 'Pengurus Provinsi Persatuan Atletik Seluruh Indonesia (PASI) Jawa Tengah dengan bangga dan penuh kehormatan memberikan Sertifikat Penghargaan kepada :') ?>
+                        <?= esc($displayKalimatPembuka) ?>
                     </div>
 
                     <div class="fed-athlete-name">
@@ -4117,12 +4370,12 @@ PLT PASI Jateng")) ?></div>
                         <div class="fed-badge-details">
                             <div class="item">
                                 <span class="label">Nomor Lomba :</span>
-                                <span class="val"><?= esc($item['nomor_lomba']) ?></span>
+                                <span class="val"><?= esc($displayNomorLomba) ?></span>
                             </div>
                             <?php if (!empty($item['prestasi']) && $item['prestasi'] !== '-'): ?>
                                 <div class="item">
                                     <span class="label">Prestasi :</span>
-                                    <span class="val"><?= esc($item['prestasi']) ?></span>
+                                    <span class="val"><?= esc($displayPrestasi) ?></span>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -4136,7 +4389,7 @@ PLT PASI Jateng")) ?></div>
                 <!-- SIGNATURES SECTION: 3 PEJABAT BERWENANG PASI & PANITIA -->
                 <div class="fed-signatures-section">
                     <div class="fed-date-city">
-                        Slawi, <?= esc($item['tanggal']) ?>
+                        <?= $isUsia567 ? 'Pekalongan, 27 September 2026' : 'Slawi, ' . esc($item['tanggal']) ?>
                     </div>
 
                     <!-- Single Signature Usia 5, 6, 7 th: HANYA KETUA PASI KOTA PEKALONGAN SAJA -->
@@ -4173,7 +4426,7 @@ PLT PASI Jateng")) ?></div>
 
                             <div class="fed-sig-cell cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
                                 <div class="fed-sig-title">
-                                    <?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?>
+                                    <?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?>
                                 </div>
                                 <div class="fed-sig-img-box">
                                     <?php if ($url2): ?>
@@ -4301,7 +4554,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -4312,7 +4565,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -4324,8 +4577,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -4456,7 +4709,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -4467,7 +4720,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -4479,8 +4732,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -4587,7 +4840,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -4598,7 +4851,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -4610,8 +4863,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -4718,7 +4971,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -4729,7 +4982,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -4741,8 +4994,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -4843,7 +5096,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -4854,7 +5107,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -4866,8 +5119,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -4969,7 +5222,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -4980,7 +5233,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -4992,8 +5245,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -5088,7 +5341,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -5099,7 +5352,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -5111,8 +5364,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -5211,7 +5464,7 @@ PLT PASI Jateng")) ?></div>
                         </div>
                         <div class="overlay-signatures-triple sig-container-triple" style="<?= !$isUsia567 ? "display:flex !important;" : "display:none !important;" ?> position: relative !important; bottom: auto !important; left: auto !important; right: auto !important; width: 100%; margin: 0; padding: 0; display: flex !important; justify-content: space-between !important; align-items: flex-end !important;">
                             <!-- TTD 1: Koordinator Wilayah (Kiri) -->
-                            <div class="overlay-sig-col">
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kiri" data-drag-name="TTD Korwil (Kiri)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_1_jabatan'] ?: "Koordinator Wilayah\nEks-Karesidenan Pekalongan")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url1): ?>
@@ -5222,7 +5475,7 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 3: Mengetahui, PLT PASI Jateng (Tengah) -->
-                            <div class="overlay-sig-col overlay-sig-col-center">
+                            <div class="overlay-sig-col overlay-sig-col-center cert-drag-item" data-drag-key="ttd_tengah" data-drag-name="TTD PASI Jateng (Tengah)">
                                 <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_3_jabatan'] ?: "Mengetahui,
 PLT PASI Jateng")) ?></div>
                                 <div class="overlay-sig-img-box">
@@ -5234,8 +5487,8 @@ PLT PASI Jateng")) ?></div>
                             </div>
 
                             <!-- TTD 2: Ketua Panitia (Kanan) -->
-                            <div class="overlay-sig-col">
-                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua Panitia Pelaksana")) ?></div>
+                            <div class="overlay-sig-col cert-drag-item" data-drag-key="ttd_kanan" data-drag-name="TTD Panitia (Kanan)">
+                                <div class="overlay-sig-title"><?= nl2br(esc($template['ttd_2_jabatan'] ?: "Ketua PASI")) ?></div>
                                 <div class="overlay-sig-img-box">
                                     <?php if ($url2): ?>
                                         <img src="<?= $url2 ?>" alt="TTD 2 & Stempel Ketua Panitia" class="overlay-sig-img">
@@ -5249,15 +5502,36 @@ PLT PASI Jateng")) ?></div>
             </div>
         </div>
 
-        <!-- QR Code Verifikasi Keabsahan (disisipkan di setiap lembar piagam) -->
+        <!-- QR Code & Segel Keamanan Verifikasi Keabsahan Resmi -->
         <?php if (!empty($item['verification_url'])): ?>
-        <div class="qr-verify-box" style="position: absolute; bottom: 12mm; right: 14mm; z-index: 50; text-align: center; background: rgba(255,255,255,0.92); padding: 3px; border-radius: 4px;">
-            <div id="qr-<?= $idx ?>" style="width: 80px; height: 80px;"></div>
-            <div style="font-family: 'Inter', sans-serif; font-size: 5.5px; color: #6B778C; margin-top: 1px; letter-spacing: 0.2px; line-height: 1.2;">
-                SCAN UNTUK VERIFIKASI
+        <div class="qr-verify-box cert-security-seal-box" style="position: absolute; bottom: 10mm; right: 13mm; z-index: 50; text-align: center; background: #ffffff; padding: 6px 8px 5px 8px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.09); border: 1.5px solid #0284C7; width: 90px; box-sizing: border-box;">
+            <div style="font-family: 'Inter', sans-serif; font-size: 6.5px; font-weight: 800; color: #0284C7; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 3px; display: flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap;">
+                &bull; E-PIAGAM SAH &bull;
+            </div>
+            <div id="qr-<?= $idx ?>" style="width: 74px; height: 74px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: #ffffff;">
+                <?php if (!empty($item['qr_data_uri'])): ?>
+                    <img src="<?= $item['qr_data_uri'] ?>" style="width: 74px; height: 74px; display: block; image-rendering: pixelated;" alt="QR Code">
+                <?php endif; ?>
+            </div>
+            <div style="font-family: 'Inter', sans-serif; font-size: 5.8px; font-weight: 800; color: #0F172A; margin-top: 3px; letter-spacing: 0.4px; line-height: 1.15; text-transform: uppercase;">
+                SCAN VERIFIKASI
+            </div>
+            <div style="font-family: 'Inter', sans-serif; font-size: 5px; font-weight: 700; color: #475569; letter-spacing: 0.3px; line-height: 1.1;">
+                PASI KOTA PEKALONGAN
             </div>
         </div>
         <?php endif; ?>
+
+        <!-- Pita Pengaman Microtext Resmi di Bagian Bawah Tiap Lembar -->
+        <div class="cert-security-ribbon" style="position: absolute; bottom: 3mm; left: 12mm; right: 12mm; z-index: 45; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(15, 23, 42, 0.12); padding-top: 2px; font-family: 'Inter', monospace; font-size: 6px; color: rgba(15, 23, 42, 0.5); letter-spacing: 0.4px; text-transform: uppercase;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #16A34A;"></span>
+                <span>DOKUMEN RESMI DIGITAL TERVERIFIKASI &bull; PASI KOTA PEKALONGAN &bull; NO: <?= esc($cleanNomor) ?></span>
+            </div>
+            <div>
+                <span>SECURITY CODE: <?= strtoupper(substr(md5(($item['nomor_piagam'] ?? '') . ($item['nama_pemenang'] ?? '')), 0, 10)) ?> &bull; DILINDUNGI SISTEM</span>
+            </div>
+        </div>
     </div>
 <?php endforeach; ?>
 
@@ -5267,7 +5541,7 @@ PLT PASI Jateng")) ?></div>
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
             <div class="modal-header bg-dark text-white border-0 py-3 px-4" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fs-4">🎨</span>
+                    <span class="fs-4"><i class="bi bi-palette-fill text-warning"></i></span>
                     <div>
                         <h5 class="modal-title fw-bold text-white mb-0" id="modalCanvaLabel">
                             Katalog Desain Border Corner Canva (Lengkap 3 Tanda Tangan)
@@ -5294,7 +5568,7 @@ PLT PASI Jateng")) ?></div>
                                     </svg>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-dark w-100 fw-bold rounded-pill">✨ Terapkan Model</button>
+                            <button class="btn btn-sm btn-dark w-100 fw-bold rounded-pill"><i class="bi bi-stars me-1"></i> Terapkan Model</button>
                         </div>
                     </div>
 
@@ -5313,7 +5587,7 @@ PLT PASI Jateng")) ?></div>
                                     </svg>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-pill">✨ Terapkan Model</button>
+                            <button class="btn btn-sm btn-outline-primary w-100 fw-bold rounded-pill"><i class="bi bi-stars me-1"></i> Terapkan Model</button>
                         </div>
                     </div>
 
@@ -5334,7 +5608,7 @@ PLT PASI Jateng")) ?></div>
                                     </svg>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-success w-100 fw-bold rounded-pill">✨ Terapkan Model</button>
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold rounded-pill"><i class="bi bi-stars me-1"></i> Terapkan Model</button>
                         </div>
                     </div>
 
@@ -5352,7 +5626,7 @@ PLT PASI Jateng")) ?></div>
                                     </svg>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold rounded-pill">✨ Terapkan Model</button>
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold rounded-pill"><i class="bi bi-stars me-1"></i> Terapkan Model</button>
                         </div>
                     </div>
 
@@ -5374,7 +5648,7 @@ PLT PASI Jateng")) ?></div>
                                     </svg>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-dark w-100 fw-bold rounded-pill">✨ Terapkan Model</button>
+                            <button class="btn btn-sm btn-outline-dark w-100 fw-bold rounded-pill"><i class="bi bi-stars me-1"></i> Terapkan Model</button>
                         </div>
                     </div>
 
@@ -5394,7 +5668,7 @@ PLT PASI Jateng")) ?></div>
                                     </svg>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-pill">✨ Terapkan Model</button>
+                            <button class="btn btn-sm btn-outline-secondary w-100 fw-bold rounded-pill"><i class="bi bi-stars me-1"></i> Terapkan Model</button>
                         </div>
                     </div>
                 </div>
@@ -5807,12 +6081,12 @@ function applyLiveOffset() {
     const hideTitle = document.getElementById('live_hide_title')?.checked;
 
     // Terapkan ukuran stempel & ttd secara realtime ke seluruh varian
-    document.querySelectorAll('.portrait-signatures-triple .sig-unit-img, .overlay-sig-img, .fed-sig-img-box img').forEach(img => {
+    document.querySelectorAll('.portrait-signatures-triple .sig-unit-img, .portrait-official-signature-center .sig-unit-img, .overlay-sig-img, .fed-sig-img-box img').forEach(img => {
         img.style.height = stempelSize + 'px';
         img.style.maxHeight = stempelSize + 'px';
         img.style.maxWidth = Math.round(stempelSize * 2.2) + 'px';
     });
-    document.querySelectorAll('.portrait-signatures-triple .sig-unit-img-box, .overlay-sig-img-box, .fed-sig-img-box').forEach(box => {
+    document.querySelectorAll('.portrait-signatures-triple .sig-unit-img-box, .portrait-official-signature-center .sig-unit-img-box, .overlay-sig-img-box, .fed-sig-img-box').forEach(box => {
         box.style.height = stempelSize + 'px';
     });
     document.querySelectorAll('.portrait-signatures-triple .sig-unit-center .sig-unit-img').forEach(img => {
@@ -5823,6 +6097,16 @@ function applyLiveOffset() {
     });
     document.querySelectorAll('.portrait-signatures-triple .sig-unit-center .sig-unit-img-box').forEach(box => {
         box.style.height = Math.round(stempelSize * 1.08) + 'px';
+    });
+    document.querySelectorAll('.piagam-sheet.is-usia-567 .sig-unit-img, .piagam-sheet.is-usia-567 .overlay-sig-img').forEach(img => {
+        const usia567Size = Math.round(stempelSize * 1.31);
+        img.style.setProperty('height', usia567Size + 'px', 'important');
+        img.style.setProperty('max-height', (usia567Size + 5) + 'px', 'important');
+        img.style.setProperty('max-width', Math.round(usia567Size * 2.25) + 'px', 'important');
+    });
+    document.querySelectorAll('.piagam-sheet.is-usia-567 .sig-unit-img-box, .piagam-sheet.is-usia-567 .overlay-sig-img-box').forEach(box => {
+        const usia567Size = Math.round(stempelSize * 1.31);
+        box.style.setProperty('height', usia567Size + 'px', 'important');
     });
 
     // 1. TANDA TANGAN & STEMPEL (Real-time untuk SEMUA template: Portrait, Landscape, Canva, Official)
@@ -5964,62 +6248,94 @@ let activeDragKey = null;
 
 const serverSavedOffsets = <?= !empty($template['custom_offsets']) ? $template['custom_offsets'] : '{}' ?>;
 
+function persistCustomOffsetsLocally() {
+    const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
+    const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
+    try {
+        localStorage.setItem(storageKey, JSON.stringify(customOffsets));
+        if (customOffsets['__hide_title'] !== undefined) {
+            localStorage.setItem('piagam_hide_title_' + currentTemplateId, customOffsets['__hide_title']);
+        }
+        if (customOffsets['__hide_labels'] !== undefined) {
+            localStorage.setItem('piagam_hide_labels_' + currentTemplateId, customOffsets['__hide_labels']);
+        }
+        if (customOffsets['__hide_ttd_center'] !== undefined) {
+            localStorage.setItem('piagam_hide_ttd_center_' + currentTemplateId, customOffsets['__hide_ttd_center']);
+        }
+    } catch(e) {}
+}
+
+let autoSaveTimer = null;
+function scheduleAutoSaveToServer() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
+        const targetCategory = isPageUsia567 ? 'usia_567' : 'umum';
+
+        serverSavedOffsets[targetCategory] = Object.assign({}, serverSavedOffsets[targetCategory], customOffsets);
+
+        const payload = new FormData();
+        payload.append('template_id', currentTemplateId);
+        payload.append('custom_offsets', JSON.stringify(serverSavedOffsets));
+
+        fetch('<?= base_url('piagam/update-template-position') ?>', {
+            method: 'POST',
+            body: payload
+        }).then(r => r.json()).then(data => {
+            console.log('Posisi tersimpan otomatis ke server:', data);
+        }).catch(err => {
+            console.warn('Gagal sinkron server:', err);
+        });
+    }, 400);
+}
+
 function loadStoredOffsets() {
     try {
         const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
-        let relevantSavedOffsets = {};
-        if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
-            if (serverSavedOffsets.usia_567 || serverSavedOffsets.umum) {
-                relevantSavedOffsets = isPageUsia567 ? (serverSavedOffsets.usia_567 || {}) : (serverSavedOffsets.umum || {});
-            } else {
-                relevantSavedOffsets = !isPageUsia567 ? serverSavedOffsets : {};
-            }
+        const targetCategory = isPageUsia567 ? 'usia_567' : 'umum';
+
+        // Server adalah Single Source of Truth mutlak!
+        customOffsets = Object.assign({}, serverSavedOffsets[targetCategory] || {});
+
+        const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(customOffsets));
+        } catch(e) {}
+
+        applyAllCustomOffsets();
+
+        // Restore hide flags langsung dari server
+        const hideTitle = customOffsets.__hide_title;
+        if (hideTitle === '1' || hideTitle === true) {
+            const el = document.getElementById('drag_hide_title');
+            if (el) el.checked = true;
+            document.querySelectorAll('.overlay-title-box, .overlay-title-text').forEach(e => e.style.display = 'none');
+        } else if (hideTitle === '0' || hideTitle === false) {
+            const el = document.getElementById('drag_hide_title');
+            if (el) el.checked = false;
+            document.querySelectorAll('.overlay-title-box, .overlay-title-text').forEach(e => e.style.display = '');
         }
 
-        // Prioritas 1: Ambil data posisi yang sudah tersimpan permanen di database
-        if (relevantSavedOffsets && typeof relevantSavedOffsets === 'object' && Object.keys(relevantSavedOffsets).length > 0) {
-            customOffsets = Object.assign({}, relevantSavedOffsets);
-            applyAllCustomOffsets();
-            
-            if (relevantSavedOffsets.__hide_title === true || relevantSavedOffsets.__hide_title === '1') {
-                const el = document.getElementById('drag_hide_title');
-                if (el) el.checked = true;
-                toggleHideTitle(true);
-            }
-            if (relevantSavedOffsets.__hide_labels === true || relevantSavedOffsets.__hide_labels === '1') {
-                const el = document.getElementById('drag_hide_labels');
-                if (el) el.checked = true;
-                toggleHideLabels(true);
-            }
-            if (relevantSavedOffsets.__hide_ttd_center === true || relevantSavedOffsets.__hide_ttd_center === '1') {
-                const el = document.getElementById('drag_hide_ttd_center');
-                if (el) el.checked = true;
-                toggleHideTtdCenter(true);
-            }
-        } else {
-            // Prioritas 2: Ambil dari localStorage browser jika ada
-            const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
-            const raw = localStorage.getItem(storageKey);
-            if (raw) {
-                customOffsets = JSON.parse(raw);
-                applyAllCustomOffsets();
-            }
+        const hideLabels = customOffsets.__hide_labels;
+        if (hideLabels === '1' || hideLabels === true) {
+            const el = document.getElementById('drag_hide_labels');
+            if (el) el.checked = true;
+            document.body.classList.add('hide-data-labels');
+        } else if (hideLabels === '0' || hideLabels === false) {
+            const el = document.getElementById('drag_hide_labels');
+            if (el) el.checked = false;
+            document.body.classList.remove('hide-data-labels');
+        }
 
-            if (localStorage.getItem('piagam_hide_title_' + currentTemplateId) === '1') {
-                const el = document.getElementById('drag_hide_title');
-                if (el) el.checked = true;
-                toggleHideTitle(true);
-            }
-            if (localStorage.getItem('piagam_hide_labels_' + currentTemplateId) === '1') {
-                const el = document.getElementById('drag_hide_labels');
-                if (el) el.checked = true;
-                toggleHideLabels(true);
-            }
-            if (localStorage.getItem('piagam_hide_ttd_center_' + currentTemplateId) === '1') {
-                const el = document.getElementById('drag_hide_ttd_center');
-                if (el) el.checked = true;
-                toggleHideTtdCenter(true);
-            }
+        const hideTtdCenter = customOffsets.__hide_ttd_center;
+        if (hideTtdCenter === '1' || hideTtdCenter === true) {
+            const el = document.getElementById('drag_hide_ttd_center');
+            if (el) el.checked = true;
+            document.body.classList.add('hide-ttd-center');
+        } else if (hideTtdCenter === '0' || hideTtdCenter === false) {
+            const el = document.getElementById('drag_hide_ttd_center');
+            if (el) el.checked = false;
+            document.body.classList.remove('hide-ttd-center');
         }
     } catch(e) {
         console.warn('Error loading custom offsets:', e);
@@ -6110,19 +6426,36 @@ function selectDragElement(key) {
 
 function applyAllCustomOffsets() {
     const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
-    const targetSelector = isPageUsia567 ? '.piagam-sheet.is-usia-567' : '.piagam-sheet:not(.is-usia-567)';
-    for (const [key, offset] of Object.entries(customOffsets)) {
+    const offsetsUmum = (serverSavedOffsets && serverSavedOffsets.umum) ? serverSavedOffsets.umum : (isPageUsia567 ? {} : customOffsets);
+    const offsets567 = (serverSavedOffsets && serverSavedOffsets.usia_567) ? serverSavedOffsets.usia_567 : (isPageUsia567 ? customOffsets : {});
+
+    // 1. Terapkan ke sheet non-usia-567
+    for (const [key, offset] of Object.entries(offsetsUmum)) {
         if (!offset || key.startsWith('__')) continue;
         const x = offset.x || 0;
         const y = offset.y || 0;
-        document.querySelectorAll(`${targetSelector} .cert-drag-item[data-drag-key="${key}"]`).forEach(el => {
+        document.querySelectorAll(`.piagam-sheet:not(.is-usia-567) .cert-drag-item[data-drag-key="${key}"]`).forEach(el => {
             el.style.setProperty('transform', `translate(${x}px, ${y}px)`, 'important');
         });
     }
+
+    // 2. Terapkan ke sheet usia-567
+    for (const [key, offset] of Object.entries(offsets567)) {
+        if (!offset || key.startsWith('__')) continue;
+        const x = offset.x || 0;
+        const y = offset.y || 0;
+        document.querySelectorAll(`.piagam-sheet.is-usia-567 .cert-drag-item[data-drag-key="${key}"]`).forEach(el => {
+            el.style.setProperty('transform', `translate(${x}px, ${y}px)`, 'important');
+        });
+    }
+
     updateDragCoordinateDisplay();
 }
 
 function toggleDragMode(forceState) {
+    if (document.body.classList.contains('is-public-view')) {
+        return; // Matikan pemindahan/geser pada tampilan publik
+    }
     if (typeof forceState === 'boolean') {
         isDragMode = forceState;
     } else {
@@ -6136,11 +6469,11 @@ function toggleDragMode(forceState) {
     if (isDragMode) {
         body.classList.add('drag-mode-active');
         if (bar) bar.style.display = 'block';
-        if (btn) {
-            btn.classList.remove('btn-outline-warning');
-            btn.classList.add('btn-warning', 'text-dark', 'fw-bold');
-            btn.innerHTML = '<i class="bi bi-check-lg"></i> Selesai Geser';
-        }
+        document.querySelectorAll('#btnToggleDrag').forEach(b => {
+            b.classList.remove('btn-outline-warning');
+            b.classList.add('btn-warning', 'text-dark', 'fw-bold');
+            b.innerHTML = '<i class="bi bi-check-lg"></i> Selesai Geser';
+        });
         if (!activeDragKey) {
             activeDragKey = 'row_nama';
         }
@@ -6148,11 +6481,11 @@ function toggleDragMode(forceState) {
     } else {
         body.classList.remove('drag-mode-active');
         if (bar) bar.style.display = 'none';
-        if (btn) {
-            btn.classList.remove('btn-warning', 'text-dark');
-            btn.classList.add('btn-outline-warning');
-            btn.innerHTML = '<i class="bi bi-arrows-move text-warning"></i> <span id="dragBtnLabel">Mode Geser Elemen</span>';
-        }
+        document.querySelectorAll('#btnToggleDrag').forEach(b => {
+            b.classList.remove('btn-warning', 'text-dark');
+            b.classList.add('btn-outline-warning');
+            b.innerHTML = '<i class="bi bi-arrows-move text-warning"></i> <span id="dragBtnLabel">Mode Geser Elemen</span>';
+        });
         document.querySelectorAll('.cert-drag-item').forEach(el => {
             el.classList.remove('is-active-target', 'is-dragging');
         });
@@ -6160,6 +6493,9 @@ function toggleDragMode(forceState) {
 }
 
 function initDraggableItems() {
+    if (document.body.classList.contains('is-public-view')) {
+        return; // Matikan pemindahan/drag pada tampilan publik
+    }
     let draggedElement = null;
     let dragKey = null;
     let startX = 0, startY = 0;
@@ -6228,6 +6564,10 @@ function initDraggableItems() {
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
         window.removeEventListener('pointercancel', onPointerUp);
+
+        // Auto-persist immediately on drag release!
+        persistCustomOffsetsLocally();
+        scheduleAutoSaveToServer();
     }
 
     document.querySelectorAll('.cert-drag-item').forEach(el => {
@@ -6259,6 +6599,8 @@ function nudgeActiveElementPx(dx, dy) {
     });
 
     updateDragCoordinateDisplay();
+    persistCustomOffsetsLocally();
+    scheduleAutoSaveToServer();
 }
 
 function toggleMmGrid() {
@@ -6302,23 +6644,26 @@ function toggleMmGrid() {
     }
 }
 
-function saveCustomDragOffsets() {
-    const btn = event ? event.target.closest('button') : null;
+function saveCustomDragOffsets(evt) {
+    const ev = evt || window.event;
+    const btn = (ev && ev.target) ? ev.target.closest('button') : document.querySelector('button[onclick*="saveCustomDragOffsets"]');
     const orig = btn ? btn.innerHTML : '';
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan ke Server...';
     }
 
-    // Catat juga status checkbox hide ke dalam payload customOffsets
+    // Catat checkbox hide ke customOffsets
     customOffsets['__hide_title'] = document.getElementById('drag_hide_title')?.checked ? '1' : '0';
     customOffsets['__hide_labels'] = document.getElementById('drag_hide_labels')?.checked ? '1' : '0';
     customOffsets['__hide_ttd_center'] = document.getElementById('drag_hide_ttd_center')?.checked ? '1' : '0';
 
     const isPageUsia567 = (document.querySelector('.piagam-sheet.is-usia-567') !== null);
-    const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
+    const targetCategory = isPageUsia567 ? 'usia_567' : 'umum';
 
-    // 1. Simpan ke localStorage browser
+    serverSavedOffsets[targetCategory] = Object.assign({}, serverSavedOffsets[targetCategory], customOffsets);
+
+    const storageKey = 'piagam_offsets_tpl_' + currentTemplateId + (isPageUsia567 ? '_usia567' : '_umum');
     try {
         localStorage.setItem(storageKey, JSON.stringify(customOffsets));
         localStorage.setItem('piagam_hide_title_' + currentTemplateId, customOffsets['__hide_title']);
@@ -6326,28 +6671,9 @@ function saveCustomDragOffsets() {
         localStorage.setItem('piagam_hide_ttd_center_' + currentTemplateId, customOffsets['__hide_ttd_center']);
     } catch(e) {}
 
-    // 2. Susun objek offsets terisolasi (usia_567 vs umum)
-    let fullOffsets = {};
-    if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
-        if (serverSavedOffsets.usia_567 || serverSavedOffsets.umum) {
-            fullOffsets = Object.assign({}, serverSavedOffsets);
-        } else {
-            fullOffsets = { umum: Object.assign({}, serverSavedOffsets), usia_567: {} };
-        }
-    }
-    if (!fullOffsets.umum) fullOffsets.umum = {};
-    if (!fullOffsets.usia_567) fullOffsets.usia_567 = {};
-
-    if (isPageUsia567) {
-        fullOffsets.usia_567 = customOffsets;
-    } else {
-        fullOffsets.umum = customOffsets;
-    }
-
-    // Simpan PERMANEN ke Database via AJAX
     const payload = new FormData();
     payload.append('template_id', currentTemplateId);
-    payload.append('custom_offsets', JSON.stringify(fullOffsets));
+    payload.append('custom_offsets', JSON.stringify(serverSavedOffsets));
 
     fetch('<?= base_url('piagam/update-template-position') ?>', {
         method: 'POST',
@@ -6356,7 +6682,7 @@ function saveCustomDragOffsets() {
     .then(res => res.json())
     .then(data => {
         if (btn) {
-            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Posisi Tersimpan!';
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Posisi Tersimpan di Server!';
             btn.classList.remove('btn-success');
             btn.classList.add('btn-light', 'text-success');
             setTimeout(() => {
@@ -6364,16 +6690,17 @@ function saveCustomDragOffsets() {
                 btn.classList.add('btn-success');
                 btn.classList.remove('btn-light', 'text-success');
                 btn.disabled = false;
-            }, 2000);
+            }, 1800);
         }
     })
     .catch(err => {
+        console.error('Gagal simpan ke DB:', err);
         if (btn) {
-            btn.innerHTML = '<i class="bi bi-check-circle"></i> Tersimpan di Browser!';
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Gagal Simpan!';
             setTimeout(() => {
                 btn.innerHTML = orig;
                 btn.disabled = false;
-            }, 2000);
+            }, 1800);
         }
     });
 }
@@ -6414,9 +6741,9 @@ function resetCustomDragOffsets() {
     let fullOffsets = {};
     if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
         if (serverSavedOffsets.usia_567 || serverSavedOffsets.umum) {
-            fullOffsets = Object.assign({}, serverSavedOffsets);
+            fullOffsets = JSON.parse(JSON.stringify(serverSavedOffsets));
         } else {
-            fullOffsets = { umum: Object.assign({}, serverSavedOffsets), usia_567: {} };
+            fullOffsets = { umum: JSON.parse(JSON.stringify(serverSavedOffsets)), usia_567: {} };
         }
     }
     if (isPageUsia567) {
@@ -6427,10 +6754,19 @@ function resetCustomDragOffsets() {
 
     const payload = new FormData();
     payload.append('template_id', currentTemplateId);
+    payload.append('context', 'kejurwil');
     payload.append('custom_offsets', JSON.stringify(fullOffsets));
     fetch('<?= base_url('piagam/update-template-position') ?>', {
         method: 'POST',
         body: payload
+    }).then(() => {
+        if (serverSavedOffsets && typeof serverSavedOffsets === 'object') {
+            if (isPageUsia567) {
+                serverSavedOffsets.usia_567 = {};
+            } else {
+                serverSavedOffsets.umum = {};
+            }
+        }
     });
 
     updateDragCoordinateDisplay();
@@ -6468,14 +6804,14 @@ document.addEventListener('DOMContentLoaded', function() {
     <?php if (!empty($item['verification_url'])): ?>
     (function() {
         const qrContainer = document.getElementById("qr-<?= $idx ?>");
-        if (qrContainer) {
+        if (qrContainer && !qrContainer.querySelector('img')) {
             new QRCode(qrContainer, {
                 text: "<?= esc($item['verification_url']) ?>",
-                width: 80,
-                height: 80,
+                width: 74,
+                height: 74,
                 colorDark: "#000000",
                 colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
+                correctLevel: QRCode.CorrectLevel.L
             });
         }
     })();
@@ -6485,16 +6821,42 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Bersihkan judul halaman secara dinamis saat dialog print terbuka
-// agar teks judul tidak muncul pada header bawaan cetakan browser
-let _savedDocTitle = '';
-window.addEventListener('beforeprint', function() {
-    _savedDocTitle = document.title;
-    document.title = '';
-});
-window.addEventListener('afterprint', function() {
-    if (_savedDocTitle) {
-        document.title = _savedDocTitle;
+// Fungsi Print & Simpan PDF Resmi
+function triggerPrintCertificate() {
+    window.print();
+}
+
+function downloadCertificatePdf() {
+    <?php if (!empty($sekolah['id'])): ?>
+        window.location.href = '<?= base_url('piagam/download-sekolah-pdf/' . $sekolah['id']) ?>';
+        return;
+    <?php else: ?>
+        const rawSchool = '<?= !empty($sekolah["nama"]) ? addslashes(preg_replace('/[^a-zA-Z0-9_\- ]/', '', $sekolah["nama"])) : "Piagam" ?>';
+        const paperSize = document.getElementById('paperSizeSwitcher')?.value || 'F4';
+        const cleanFileName = `E-Piagam_${rawSchool.replace(/\s+/g, '_')}_${paperSize}`;
+        
+        // Set judul halaman agar saat browser membuka dialog print (Save as PDF), nama berkas otomatis sesuai
+        document.title = cleanFileName;
+        window.print();
+    <?php endif; ?>
+}
+
+// Tangani aksi otomatis jika ada parameter URL (?print=1 atau ?download=1)
+window.addEventListener('load', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode') || urlParams.get('action') || (urlParams.has('print') ? 'print' : (urlParams.has('download') ? 'download' : ''));
+    if (mode === 'print') {
+        setTimeout(function() {
+            window.print();
+        }, 500);
+    } else if (mode === 'download') {
+        <?php if (!empty($sekolah['id'])): ?>
+            window.location.href = '<?= base_url('piagam/download-sekolah-pdf/' . $sekolah['id']) ?>';
+        <?php else: ?>
+            setTimeout(function() {
+                downloadCertificatePdf();
+            }, 500);
+        <?php endif; ?>
     }
 });
 </script>

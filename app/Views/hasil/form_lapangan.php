@@ -267,7 +267,7 @@
             PERSATUAN ATLETIK SELURUH INDONESIA (PASI)
         </div>
         <div class="fw-bold text-uppercase kop-venue" style="font-size: 11.5px;">
-            <?= strtoupper(esc($activeKejuaraan['tempat'] ?? 'STADION HOEGENG PEKALONGAN')) ?> &bull; <?= esc($event['jadwal_hari'] ?: 'Sabtu, 29 Agustus 2026') ?> <?= !empty($event['jadwal_waktu']) ? ' &bull; ' . esc($event['jadwal_waktu']) : '' ?>
+            <?= strtoupper(esc($activeKejuaraan['tempat'] ?? 'STADION HOEGENG PEKALONGAN')) ?> &bull; <?= esc($event['jadwal_hari'] ?: (!empty($activeKejuaraan['id']) && (int)$activeKejuaraan['id'] === 2 ? 'Sabtu, 29 Agustus 2026' : 'Minggu, 27 September 2026')) ?> <?= !empty($event['jadwal_waktu']) ? ' &bull; ' . esc($event['jadwal_waktu']) : '' ?>
         </div>
 
         <div class="sheet-event-info mt-2">

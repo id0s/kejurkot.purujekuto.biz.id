@@ -35,6 +35,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'auth'          => \App\Filters\AuthFilter::class,
+        'role'          => \App\Filters\RoleFilter::class,
     ];
 
     /**
@@ -81,6 +82,15 @@ class Filters extends BaseFilters
                     'assets/*',
                     'downloads/*',
                     'verifikasi/*',
+                    'piagam/sekolah',
+                    'piagam/sekolah/*',
+                    'piagam/download-sekolah-pdf',
+                    'piagam/download-sekolah-pdf/*',
+                    'piagam/export-sekolah-excel',
+                    'piagam-kejurkot/cetak',
+                    'piagam-kejurkot/cetak/*',
+                    'piagam/cetak-event/*',
+                    'piagam/update-template-position',
                 ],
             ],
             // 'honeypot',
@@ -92,6 +102,7 @@ class Filters extends BaseFilters
                 'except' => [
                     '*/cetak*',
                     'piagam/*',
+                    'piagam-kejurkot/*',
                     'buku_acara/*',
                     'bukuacara/*',
                     'buku-acara/*',

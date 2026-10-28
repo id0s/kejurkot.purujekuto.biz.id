@@ -13,6 +13,8 @@ class PiagamCustomModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
+        'uuid',
+        'kejuaraan_id',
         'template_id',
         'event_id',
         'peserta_event_id',
@@ -42,6 +44,13 @@ class PiagamCustomModel extends Model
     protected $dateFormat    = 'datetime';
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
+
+    public function getPemenangByKejuaraan($kejuaraanId)
+    {
+        return $this->where('kejuaraan_id', $kejuaraanId)
+                    ->orderBy('id', 'ASC')
+                    ->findAll();
+    }
 
     public function initializeTable(): void
     {

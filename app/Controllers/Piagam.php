@@ -98,8 +98,16 @@ class Piagam extends BaseController
         $kejuaraanId = $this->activeKejuaraan['id'] ?? null;
         $filterEventId = $this->request->getGet('event_id');
 
-        // Ambil semua event di kejuaraan aktif
-        $events = $this->eventModel->getEventsWithDetails($kejuaraanId);
+        // Ambil semua event di kejuaraan aktif (Hanya Babak Final, Babak Penyisihan tidak dicetak piagam)
+        $rawEvents = $this->eventModel->getEventsWithDetails($kejuaraanId);
+        $events = array_values(array_filter($rawEvents, function($ev) {
+            return strcasecmp($ev['babak'] ?? '', 'Penyisihan') !== 0;
+        }));
+
+        // Jika kejuaraan aktif tidak memiliki data event balap tapi memiliki pemenang custom (misal Kejurkot)
+        if (empty($events) && $kejuaraanId && $this->customModel->where('kejuaraan_id', $kejuaraanId)->countAllResults() > 0) {
+            return $this->kejurkotIndex();
+        }
 
         // Ambil pemenang (Juara 1, 2, 3) untuk setiap event
         $pemenangPerEvent = [];
@@ -122,7 +130,7 @@ class Piagam extends BaseController
         $templates = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
         $defaultTemplate = $this->templateModel->getDefaultTemplate();
 
-        $this->data['title']            = 'Piagam Penghargaan — Kejurwil Atletik';
+        $this->data['title']            = 'Piagam Penghargaan - Kejurwil Atletik';
         $this->data['events']           = $events;
         $this->data['pemenangPerEvent'] = $pemenangPerEvent;
         $this->data['totalPemenang']    = $totalPemenang;
@@ -149,21 +157,35 @@ class Piagam extends BaseController
         }
         $eventId = (int)$event['id'];
 
+        // Babak Penyisihan tidak diberikan piagam penghargaan (hanya untuk babak Final)
+        if (strcasecmp($event['babak'] ?? '', 'Penyisihan') === 0) {
+            return redirect()->to(base_url('piagam'))->with('error', 'Piagam Penghargaan hanya untuk Babak Final. Babak Penyisihan tidak dicetak piagam.');
+        }
+
         $evKuCheck = strtolower(($event['kategori_usia'] ?? '') . ' ' . ($event['nama_acara'] ?? ''));
         $isEvUsia567 = (($event['kelompok_umur_id'] ?? 0) == 1 || preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $evKuCheck));
 
         $templateId = (int)($this->request->getGet('template_id') ?? 0);
-        if ($templateId <= 0) {
-            if ($isEvUsia567) {
-                $templateId = 22; // Template Khusus Usia Dini (5, 6, 7 Tahun)
-            } else {
+        if ($isEvUsia567) {
+            // Usia Dini 5, 6, 7 Tahun HANYA menggunakan Template 22 (Trophy)
+            $templateId = 22;
+        } else {
+            // Selain Usia Dini TIDAK BISA menggunakan Template 22
+            if ($templateId <= 0 || $templateId === 22) {
                 $def = $this->templateModel->getDefaultTemplate();
-                $templateId = ($def && $def['id'] != 22) ? (int)$def['id'] : 13;
+                $templateId = ($def && (int)$def['id'] !== 22) ? (int)$def['id'] : 21;
             }
         }
         $template = $this->templateModel->find($templateId);
         if (!$template) {
+                    $templateId = (int)($this->request->getGet('template_id') ?? 0);
+        $template = null;
+        if ($templateId > 0) {
+            $template = $this->templateModel->find($templateId);
+        }
+        if (!$template) {
             $template = $this->templateModel->getDefaultTemplate() ?: $this->templateModel->first();
+        }
         }
 
         $winners = $this->getWinnersByEvent($eventId);
@@ -175,9 +197,18 @@ class Piagam extends BaseController
         $seq = 1;
         $piagamList = $this->formatPiagamItems($winners, $template, $seq, $eventId);
 
-        $this->data['title']      = "Cetak Piagam — Acara {$event['nomor_acara']}: {$event['nama_acara']}";
+        $allActiveTemplates = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
+        if ($isEvUsia567) {
+            // Usia Dini 5, 6, 7 th HANYA boleh mengakses Template 22
+            $filteredTemplates = array_values(array_filter($allActiveTemplates, fn($t) => (int)$t['id'] === 22));
+        } else {
+            // Selain Usia Dini TIDAK BISA mengakses Template 22
+            $filteredTemplates = array_values(array_filter($allActiveTemplates, fn($t) => (int)$t['id'] !== 22));
+        }
+
+        $this->data['title']      = "Cetak Piagam - Acara {$event['nomor_acara']}: {$event['nama_acara']}";
         $this->data['template']   = $template;
-        $this->data['templates']  = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
+        $this->data['templates']  = $filteredTemplates;
         $this->data['piagamList'] = $piagamList;
         $this->data['event']      = $event;
 
@@ -199,7 +230,11 @@ class Piagam extends BaseController
             $template = $this->templateModel->first();
         }
 
-        $events = $this->eventModel->getEventsWithDetails($kejuaraanId);
+        // Hanya cetak piagam untuk event Babak Final (Penyisihan tidak dicetak piagam)
+        $rawEvents = $this->eventModel->getEventsWithDetails($kejuaraanId);
+        $events = array_values(array_filter($rawEvents, function($ev) {
+            return strcasecmp($ev['babak'] ?? '', 'Penyisihan') !== 0;
+        }));
         $piagamList = [];
         $seq = 1;
 
@@ -222,6 +257,502 @@ class Piagam extends BaseController
         $this->data['event']      = null;
 
         return view('piagam/cetak', $this->data);
+    }
+
+
+    /**
+     * Halaman Pilih Daerah untuk Cetak Piagam
+     * URL: /piagam/cetak-daerah
+     */
+    public function daerahIndex()
+    {
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? null;
+        $daerahList = $this->getDaerahList($kejuaraanId);
+
+        $winnersByDaerah = [];
+        foreach ($daerahList as $d) {
+            $winnersByDaerah[$d['daerah']] = $this->getWinnersByDaerah($d['daerah'], $kejuaraanId);
+        }
+
+        $this->data['title']           = 'Cetak Piagam Berdasarkan Daerah';
+        $this->data['daerahList']      = $daerahList;
+        $this->data['winnersByDaerah'] = $winnersByDaerah;
+        $this->data['templates']  = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
+        $this->data['defaultTemplate'] = $this->templateModel->getDefaultTemplate();
+
+        return view('piagam/daerah_index', $this->data);
+    }
+
+    /**
+     * Cetak Piagam Pemenang yang Difilter Berdasarkan Daerah Asal (sekolah.alamat)
+     * URL: /piagam/cetak-daerah/{slug}
+     * Contoh: /piagam/cetak-daerah/kabupaten-tegal
+     */
+    public function cetakByDaerah(string $daerahSlug = '')
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        // Konversi slug ke nama daerah: "kabupaten-tegal" -> "Kabupaten Tegal"
+        $daerahName = ucwords(str_replace('-', ' ', urldecode($daerahSlug)));
+        if (empty($daerahName)) {
+            return redirect()->to(base_url('piagam/cetak-daerah'))->with('error', 'Daerah tidak dipilih.');
+        }
+
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? null;
+        $templateId  = (int)($this->request->getGet('template_id') ?? 0);
+        $template    = $templateId ? $this->templateModel->find($templateId) : $this->templateModel->getDefaultTemplate();
+        if (!$template) {
+            $template = $this->templateModel->first();
+        }
+
+        // Ambil semua pemenang dari daerah tersebut lintas semua event
+        $winners = $this->getWinnersByDaerah($daerahName, $kejuaraanId);
+
+        if (empty($winners)) {
+            return redirect()->to(base_url('piagam/cetak-daerah'))->with('error', "Tidak ada pemenang (Juara 1-3) dari daerah \"{$daerahName}\".");
+        }
+
+        // Kelompokkan pemenang per event agar formatPiagamItems bisa memproses estafet dengan benar
+        $winnersByEvent = [];
+        foreach ($winners as $w) {
+            $evId = (int)($w['event_id'] ?? 0);
+            if (!isset($winnersByEvent[$evId])) {
+                $winnersByEvent[$evId] = [];
+            }
+            $winnersByEvent[$evId][] = $w;
+        }
+
+        $piagamList = [];
+        $seq = 1;
+        foreach ($winnersByEvent as $evId => $evWinners) {
+            $items = $this->formatPiagamItems($evWinners, $template, $seq, $evId);
+            $piagamList = array_merge($piagamList, $items);
+        }
+
+        if (empty($piagamList)) {
+            return redirect()->to(base_url('piagam/cetak-daerah'))->with('error', "Tidak ada piagam untuk daerah \"{$daerahName}\".");
+        }
+
+        $allActiveTemplates = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
+        // Exclude template Usia Dini (id=22)
+        $filteredTemplates = array_values(array_filter($allActiveTemplates, fn($t) => (int)$t['id'] !== 22));
+
+        $this->data['title']      = "Cetak Piagam Daerah: {$daerahName} (" . count($piagamList) . ' Piagam)';
+        $this->data['template']   = $template;
+        $this->data['templates']  = $filteredTemplates;
+        $this->data['piagamList'] = $piagamList;
+        $this->data['event']      = null;
+
+        return view('piagam/cetak', $this->data);
+    }
+
+    /**
+     * Halaman Rekap & Link E-Piagam Publik per Sekolah / Kontingen
+     * URL: /piagam/sekolah
+     */
+    public function sekolahIndex()
+    {
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? null;
+        $db = \Config\Database::connect();
+
+        $builder = $db->table('hasil h')
+            ->select('s.id as sekolah_id, s.nama as nama_sekolah, s.jenjang, s.alamat as asal_daerah, s.no_telepon, s.kontak_person,
+                      SUM(CASE WHEN h.peringkat = 1 THEN 1 ELSE 0 END) as emas,
+                      SUM(CASE WHEN h.peringkat = 2 THEN 1 ELSE 0 END) as perak,
+                      SUM(CASE WHEN h.peringkat = 3 THEN 1 ELSE 0 END) as perunggu,
+                      COUNT(h.id) as total_juara')
+            ->join('peserta_event pe', 'pe.id = h.peserta_event_id')
+            ->join('atlet a', 'a.id = pe.atlet_id')
+            ->join('sekolah s', 's.id = a.sekolah_id')
+            ->join('event e', 'e.id = pe.event_id')
+            ->where('h.peringkat IS NOT NULL')
+            ->where('h.peringkat >', 0)
+            ->where('h.peringkat <=', 3)
+            ->where('h.status_prestasi', 'Valid')
+            ->where('LOWER(e.babak) !=', 'penyisihan');
+
+        if ($kejuaraanId) {
+            $builder->where('e.kejuaraan_id', $kejuaraanId);
+        }
+
+        $sekolahList = $builder->groupBy('s.id, s.nama, s.jenjang, s.alamat, s.no_telepon, s.kontak_person')
+            ->orderBy('total_juara', 'DESC')
+            ->orderBy('emas', 'DESC')
+            ->orderBy('perak', 'DESC')
+            ->orderBy('perunggu', 'DESC')
+            ->orderBy('s.nama', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        // Siapkan link publik dan ringkasan atlet pemenang untuk tiap sekolah
+        foreach ($sekolahList as &$sch) {
+            $sch['public_url'] = base_url('piagam/sekolah/' . $sch['sekolah_id']);
+            $sch['winners'] = $this->getWinnersBySchool((int)$sch['sekolah_id'], $kejuaraanId);
+        }
+        unset($sch);
+
+        $this->data['title']           = 'E-Piagam Per Sekolah (Link Publik)';
+        $this->data['sekolahList']     = $sekolahList;
+        $this->data['defaultTemplate'] = $this->templateModel->getDefaultTemplate();
+
+        return view('piagam/sekolah_index', $this->data);
+    }
+
+    /**
+     * Unduh File Excel (.xlsx) Rekap Medali & Link E-Piagam Online per Sekolah
+     * URL: /piagam/export-sekolah-excel
+     */
+    public function exportSekolahExcel()
+    {
+        $filePath = FCPATH . 'downloads/DAFTAR_LINK_E_PIAGAM_SEKOLAH_KEJURWIL_2026.xlsx';
+        
+        if (!file_exists($filePath)) {
+            @exec('python ' . escapeshellarg(ROOTPATH . 'generate_excel.py'));
+        }
+
+        if (file_exists($filePath)) {
+            return $this->response->download($filePath, null)
+                ->setFileName('DAFTAR_LINK_E_PIAGAM_SEKOLAH_KEJURWIL_2026.xlsx');
+        }
+
+        return redirect()->back()->with('error', 'File Excel rekap link piagam belum tersedia.');
+    }
+
+    /**
+     * Tampilan E-Piagam Publik per Sekolah / Kontingen (Dapat diakses online tanpa login)
+     * URL: /piagam/sekolah/{id_atau_slug}
+     */
+    public function sekolah($identifier = null)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        if (empty($identifier)) {
+            return redirect()->to(base_url())->with('error', 'Sekolah tidak ditentukan.');
+        }
+
+        $db = \Config\Database::connect();
+        $sekolah = null;
+
+        if (is_numeric($identifier)) {
+            $sekolah = $db->table('sekolah')->where('id', (int)$identifier)->get()->getRowArray();
+        } else {
+            $cleanName = trim(urldecode(str_replace('-', ' ', (string)$identifier)));
+            $sekolah = $db->table('sekolah')->like('nama', $cleanName)->get()->getRowArray();
+        }
+
+        if (!$sekolah) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Data sekolah/kontingen tidak ditemukan.");
+        }
+
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? null;
+        $winners = $this->getWinnersBySchool((int)$sekolah['id'], $kejuaraanId);
+
+        if (empty($winners)) {
+            // Fallback: cari di seluruh kejuaraan agar tautan publik sekolah tidak dialihkan / dipindahkan
+            $winners = $this->getWinnersBySchool((int)$sekolah['id'], null);
+        }
+
+        if (empty($winners)) {
+            return redirect()->to(base_url())->with('error', "Belum ada piagam penghargaan juara final untuk kontingen \"{$sekolah['nama']}\".");
+        }
+
+                $templateId = (int)($this->request->getGet('template_id') ?? 0);
+        $template = null;
+        if ($templateId > 0) {
+            $template = $this->templateModel->find($templateId);
+        }
+        if (!$template) {
+            $template = $this->templateModel->getDefaultTemplate() ?: $this->templateModel->first();
+        }
+
+        // Kelompokkan pemenang per event agar estafet dan data tertata
+        $winnersByEvent = [];
+        foreach ($winners as $w) {
+            $evId = (int)($w['event_id'] ?? 0);
+            if (!isset($winnersByEvent[$evId])) {
+                $winnersByEvent[$evId] = [];
+            }
+            $winnersByEvent[$evId][] = $w;
+        }
+
+        $piagamList = [];
+        $seq = 1;
+        foreach ($winnersByEvent as $evId => $evWinners) {
+            $items = $this->formatPiagamItems($evWinners, $template, $seq, $evId);
+            $piagamList = array_merge($piagamList, $items);
+        }
+
+        if (empty($piagamList)) {
+            return redirect()->to(base_url())->with('error', "Tidak ada piagam untuk sekolah \"{$sekolah['nama']}\".");
+        }
+
+        // Siapkan QR Code Server-Side sebagai Base64 PNG data URI resolusi tinggi & rapi
+        $qrOptions = new \chillerlan\QRCode\QROptions([
+            'outputInterface' => \chillerlan\QRCode\Output\QRGdImagePNG::class,
+            'scale'           => 6,
+            'eccLevel'        => \chillerlan\QRCode\Common\EccLevel::L,
+        ]);
+        $qr = new \chillerlan\QRCode\QRCode($qrOptions);
+
+        foreach ($piagamList as &$item) {
+            if (!empty($item['verification_url'])) {
+                try {
+                    $item['qr_data_uri'] = (string)$qr->render($item['verification_url']);
+                } catch (\Throwable $e) {
+                    $item['qr_data_uri'] = '';
+                }
+            } else {
+                $item['qr_data_uri'] = '';
+            }
+        }
+        unset($item);
+
+        $this->data['title']       = "E-Piagam Resmi - {$sekolah['nama']}";
+        $this->data['template']    = $template;
+        $this->data['templates']   = [$template];
+        $this->data['piagamList']  = $piagamList;
+        $this->data['event']       = null;
+        $this->data['sekolah']     = $sekolah;
+        $this->data['isPublic']    = true;
+
+        return view('piagam/cetak', $this->data);
+    }
+
+    /**
+     * Unduh Berkas Pure PDF E-Piagam Resmi per Sekolah (Mobile HP & Desktop Friendly)
+     * URL: /piagam/download-sekolah-pdf/{id_atau_slug}
+     */
+    public function downloadSekolahPdf($identifier = null)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        if (empty($identifier)) {
+            return redirect()->to(base_url('piagam/sekolah'))->with('error', 'Sekolah tidak ditentukan.');
+        }
+
+        $db = \Config\Database::connect();
+        $sekolah = null;
+
+        if (is_numeric($identifier)) {
+            $sekolah = $db->table('sekolah')->where('id', (int)$identifier)->get()->getRowArray();
+        } else {
+            $cleanName = trim(urldecode(str_replace('-', ' ', (string)$identifier)));
+            $sekolah = $db->table('sekolah')->like('nama', $cleanName)->get()->getRowArray();
+        }
+
+        if (!$sekolah) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Data sekolah/kontingen tidak ditemukan.");
+        }
+
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? null;
+        $winners = $this->getWinnersBySchool((int)$sekolah['id'], $kejuaraanId);
+
+        if (empty($winners)) {
+            // Fallback: cari di seluruh kejuaraan agar berkas PDF sekolah publik tetap dapat diunduh
+            $winners = $this->getWinnersBySchool((int)$sekolah['id'], null);
+        }
+
+        if (empty($winners)) {
+            return redirect()->to(base_url('piagam/sekolah'))->with('error', "Belum ada piagam penghargaan juara final untuk kontingen \"{$sekolah['nama']}\".");
+        }
+
+                $templateId = (int)($this->request->getGet('template_id') ?? 0);
+        $template = null;
+        if ($templateId > 0) {
+            $template = $this->templateModel->find($templateId);
+        }
+        if (!$template) {
+            $template = $this->templateModel->getDefaultTemplate() ?: $this->templateModel->first();
+        }
+
+        // Kelompokkan pemenang per event agar estafet dan data tertata
+        $winnersByEvent = [];
+        foreach ($winners as $w) {
+            $evId = (int)($w['event_id'] ?? 0);
+            if (!isset($winnersByEvent[$evId])) {
+                $winnersByEvent[$evId] = [];
+            }
+            $winnersByEvent[$evId][] = $w;
+        }
+
+        $piagamList = [];
+        $seq = 1;
+        foreach ($winnersByEvent as $evId => $evWinners) {
+            $items = $this->formatPiagamItems($evWinners, $template, $seq, $evId);
+            $piagamList = array_merge($piagamList, $items);
+        }
+
+        if (empty($piagamList)) {
+            return redirect()->to(base_url('piagam/sekolah'))->with('error', "Tidak ada piagam untuk sekolah \"{$sekolah['nama']}\".");
+        }
+
+        // Siapkan QR Code Server-Side sebagai Base64 PNG data URI resolusi tinggi & rapi
+        $qrOptions = new \chillerlan\QRCode\QROptions([
+            'outputInterface' => \chillerlan\QRCode\Output\QRGdImagePNG::class,
+            'scale'           => 6,
+            'eccLevel'        => \chillerlan\QRCode\Common\EccLevel::L,
+        ]);
+        $qr = new \chillerlan\QRCode\QRCode($qrOptions);
+
+        foreach ($piagamList as &$item) {
+            if (!empty($item['verification_url'])) {
+                try {
+                    $item['qr_data_uri'] = (string)$qr->render($item['verification_url']);
+                } catch (\Throwable $e) {
+                    $item['qr_data_uri'] = '';
+                }
+            } else {
+                $item['qr_data_uri'] = '';
+            }
+        }
+        unset($item);
+
+        // Siapkan data URI gambar background dan tanda tangan
+        $bgFile = $template['file_background'] ?: 'template_1790317760_9b669099.png';
+        $bgPath = FCPATH . 'uploads/piagam/templates/' . $bgFile;
+        $bgDataUri = file_exists($bgPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($bgPath)) : '';
+
+        $loadSig = function($fn) {
+            $p = FCPATH . 'uploads/piagam/ttd/' . $fn;
+            if (!file_exists($p)) $p = FCPATH . 'assets/images/' . $fn;
+            return file_exists($p) ? 'data:image/png;base64,' . base64_encode(file_get_contents($p)) : '';
+        };
+
+        $sig1DataUri = $loadSig('ttd_jumanto_pasi_pekalongan.png');
+        $sig2DataUri = $loadSig('ttd_zaini_pasi_pekalongan.png');
+        $sig3DataUri = $loadSig('ttd_agus_widodo_pasi_jateng.png');
+
+        $viewData = [
+            'title'       => "E-Piagam Resmi - {$sekolah['nama']}",
+            'sekolah'     => $sekolah,
+            'template'    => $template,
+            'piagamList'  => $piagamList,
+            'bgDataUri'   => $bgDataUri,
+            'sig1DataUri' => $sig1DataUri,
+            'sig2DataUri' => $sig2DataUri,
+            'sig3DataUri' => $sig3DataUri,
+        ];
+
+        $html = view('piagam/cetak_pdf', $viewData);
+
+        // Render PDF murni menggunakan Dompdf
+        $dompdfOptions = new \Dompdf\Options();
+        $dompdfOptions->set('isRemoteEnabled', true);
+        $dompdfOptions->set('isHtml5ParserEnabled', true);
+        $dompdfOptions->set('dpi', 150);
+        $dompdfOptions->set('defaultFont', 'Helvetica');
+
+        $dompdf = new \Dompdf\Dompdf($dompdfOptions);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper([0, 0, 609.45, 935.43], 'portrait'); // F4 Folio Portrait (215mm x 330mm)
+        $dompdf->render();
+
+        $pdfOutput = $dompdf->output();
+
+        $cleanSchool = preg_replace('/[^a-zA-Z0-9_\-]/', '_', trim($sekolah['nama'] ?? 'Sekolah'));
+        $cleanSchool = preg_replace('/_+/', '_', $cleanSchool);
+        $filename = "E-Piagam_{$cleanSchool}.pdf";
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setHeader('Content-Length', (string)strlen($pdfOutput))
+            ->setHeader('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
+            ->setHeader('Pragma', 'public')
+            ->setBody($pdfOutput);
+    }
+
+    /**
+     * Helper: Ambil pemenang (Juara 1-3 Babak Final) khusus sekolah tertentu
+     */
+    protected function getWinnersBySchool(int $sekolahId, ?int $kejuaraanId = null): array
+    {
+        $db = \Config\Database::connect();
+        $builder = $db->table('hasil h')
+            ->select('h.*, pe.id as peserta_event_id, pe.lane as no_lintasan, pe.heat as seri, pe.event_id, a.id as atlet_id, a.no_dada as nomor_dada, a.nama as nama_atlet, a.catatan as catatan_atlet, a.gender, a.tanggal_lahir, a.akta_file, a.akta_url, s.id as sekolah_id, s.nama as nama_sekolah, s.alamat as asal_daerah, e.nama_acara, e.nomor_acara, e.gender as event_gender, nl.nama as nama_lomba, nl.satuan_hasil, ku.nama as nama_ku, ku.keterangan as ket_ku')
+            ->join('peserta_event pe', 'pe.id = h.peserta_event_id')
+            ->join('atlet a', 'a.id = pe.atlet_id')
+            ->join('sekolah s', 's.id = a.sekolah_id', 'left')
+            ->join('event e', 'e.id = pe.event_id')
+            ->join('nomor_lomba nl', 'nl.id = e.nomor_lomba_id', 'left')
+            ->join('kelompok_umur ku', 'ku.id = e.kelompok_umur_id', 'left')
+            ->where('h.peringkat IS NOT NULL')
+            ->where('h.peringkat >', 0)
+            ->where('h.peringkat <=', 3)
+            ->where('h.status_prestasi', 'Valid')
+            ->where('LOWER(e.babak) !=', 'penyisihan')
+            ->where('s.id', $sekolahId);
+
+        if ($kejuaraanId) {
+            $builder->where('e.kejuaraan_id', $kejuaraanId);
+        }
+
+        return $builder->orderBy('e.nomor_acara', 'ASC')
+            ->orderBy('h.peringkat', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Helper: Ambil daftar daerah beserta jumlah pemenang (Juara 1-3)
+     */
+    protected function getDaerahList(?int $kejuaraanId = null): array
+    {
+        $db = \Config\Database::connect();
+        $builder = $db->table('hasil h')
+            ->select('s.alamat as daerah, COUNT(*) as jumlah_pemenang')
+            ->join('peserta_event pe', 'pe.id = h.peserta_event_id')
+            ->join('atlet a', 'a.id = pe.atlet_id')
+            ->join('sekolah s', 's.id = a.sekolah_id', 'left')
+            ->join('event e', 'e.id = pe.event_id')
+            ->where('h.peringkat IS NOT NULL')
+            ->where('h.peringkat >', 0)
+            ->where('h.peringkat <=', 3)
+            ->where('h.status_prestasi', 'Valid')
+            ->where('LOWER(e.babak) !=', 'penyisihan');
+
+        if ($kejuaraanId) {
+            $builder->where('e.kejuaraan_id', $kejuaraanId);
+        }
+
+        return $builder->groupBy('s.alamat')
+            ->orderBy('jumlah_pemenang', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Helper: Ambil pemenang (Juara 1-3) dari semua event, difilter berdasarkan daerah asal
+     */
+    protected function getWinnersByDaerah(string $daerahName, ?int $kejuaraanId = null): array
+    {
+        $db = \Config\Database::connect();
+        $builder = $db->table('hasil h')
+            ->select('h.*, pe.id as peserta_event_id, pe.lane as no_lintasan, pe.heat as seri, pe.event_id, a.id as atlet_id, a.no_dada as nomor_dada, a.nama as nama_atlet, a.catatan as catatan_atlet, a.gender, a.tanggal_lahir, a.akta_file, a.akta_url, s.nama as nama_sekolah, s.alamat as asal_daerah, e.nama_acara, e.nomor_acara, e.gender as event_gender, nl.nama as nama_lomba, nl.satuan_hasil, ku.nama as nama_ku, ku.keterangan as ket_ku')
+            ->join('peserta_event pe', 'pe.id = h.peserta_event_id')
+            ->join('atlet a', 'a.id = pe.atlet_id')
+            ->join('sekolah s', 's.id = a.sekolah_id', 'left')
+            ->join('event e', 'e.id = pe.event_id')
+            ->join('nomor_lomba nl', 'nl.id = e.nomor_lomba_id', 'left')
+            ->join('kelompok_umur ku', 'ku.id = e.kelompok_umur_id', 'left')
+            ->where('h.peringkat IS NOT NULL')
+            ->where('h.peringkat >', 0)
+            ->where('h.peringkat <=', 3)
+            ->where('h.status_prestasi', 'Valid')
+            ->where('LOWER(e.babak) !=', 'penyisihan')
+            ->where('s.alamat', $daerahName);
+
+        if ($kejuaraanId) {
+            $builder->where('e.kejuaraan_id', $kejuaraanId);
+        }
+
+        return $builder->orderBy('e.nomor_acara', 'ASC')
+            ->orderBy('h.peringkat', 'ASC')
+            ->get()
+            ->getResultArray();
     }
 
     /**
@@ -272,24 +803,61 @@ class Piagam extends BaseController
             'satuan'              => '',
         ];
 
+        // Jika opsi simpan_ke_database dicentang, update tanggal & tempat ke tabel kejuaraan
+        $simpanKeDb = $this->request->getPost('simpan_ke_database') ?? $this->request->getGet('simpan_ke_database');
+        if ($simpanKeDb == '1' || $simpanKeDb === 'true') {
+            $kejuaraanController = new \App\Controllers\Kejuaraan();
+            $parsedDate = $kejuaraanController->parseIndonesianDate($customItem['tanggal']);
+            if ($parsedDate) {
+                $kId = $this->activeKejuaraan['id'] ?? 1;
+                $upData = ['tanggal_mulai' => $parsedDate, 'tanggal_selesai' => $parsedDate];
+                if (!empty($customItem['tempat'])) {
+                    $upData['tempat'] = $customItem['tempat'];
+                }
+                (new \App\Models\KejuaraanModel())->update($kId, $upData);
+            }
+        }
+
+        $nomorLombaInput   = $getOrPost('nomor_lomba', '');
+        $kategoriUsiaInput = $getOrPost('kategori_usia', '');
+        $kejuaraanInput    = $getOrPost('nama_kejuaraan', '');
         $paramHanyaPekalongan = $this->request->getPost('hanya_ketua_pekalongan') ?? $this->request->getGet('hanya_ketua_pekalongan');
-        if ($paramHanyaPekalongan !== null) {
-            $customItem['hanya_ketua_pekalongan'] = ($paramHanyaPekalongan === '1' || $paramHanyaPekalongan === 'true');
+        $checkUsia567 = strtolower($nomorLombaInput . ' ' . $kategoriUsiaInput . ' ' . $kejuaraanInput);
+        $isCustomUsia567 = (preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $checkUsia567) || ($paramHanyaPekalongan == '1' || $paramHanyaPekalongan === 'true'));
+
+        $templateId = (int)($this->request->getPost('template_id') ?? $this->request->getGet('template_id') ?? 0);
+        if ($isCustomUsia567) {
+            // Usia Dini 5, 6, 7 th HANYA boleh menggunakan Template 22
+            $templateId = 22;
+        } else {
+            // Selain Usia Dini TIDAK BISA menggunakan Template 22
+            if ($templateId <= 0 || $templateId === 22) {
+                $def = $this->templateModel->getDefaultTemplate();
+                $templateId = ($def && (int)$def['id'] !== 22) ? (int)$def['id'] : 21;
+            }
+        }
+        $template = $this->templateModel->find($templateId);
+        if (!$template) {
+                    $templateId = (int)($this->request->getGet('template_id') ?? 0);
+        $template = null;
+        if ($templateId > 0) {
+            $template = $this->templateModel->find($templateId);
+        }
+        if (!$template) {
+            $template = $this->templateModel->getDefaultTemplate() ?: $this->templateModel->first();
+        }
         }
 
-        // Jika user ingin override penandatangan khusus untuk cetak ini
-        if ($this->request->getPost('override_ttd')) {
-            $template['ttd_1_jabatan'] = $this->request->getPost('ttd_1_jabatan') ?: $template['ttd_1_jabatan'];
-            $template['ttd_1_nama']    = $this->request->getPost('ttd_1_nama') ?: $template['ttd_1_nama'];
-            $template['ttd_2_jabatan'] = $this->request->getPost('ttd_2_jabatan') ?: $template['ttd_2_jabatan'];
-            $template['ttd_2_nama']    = $this->request->getPost('ttd_2_nama') ?: $template['ttd_2_nama'];
-            $template['ttd_3_jabatan'] = $this->request->getPost('ttd_3_jabatan') ?: $template['ttd_3_jabatan'];
-            $template['ttd_3_nama']    = $this->request->getPost('ttd_3_nama') ?: $template['ttd_3_nama'];
+        $allActiveTemplates = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
+        if ($isCustomUsia567) {
+            $filteredTemplates = array_values(array_filter($allActiveTemplates, fn($t) => (int)$t['id'] === 22));
+        } else {
+            $filteredTemplates = array_values(array_filter($allActiveTemplates, fn($t) => (int)$t['id'] !== 22));
         }
 
-        $this->data['title']      = "Cetak Piagam Kustom — " . esc($customItem['nama_pemenang']);
+        $this->data['title']      = "Cetak Piagam Kustom - " . esc($customItem['nama_pemenang']);
         $this->data['template']   = $template;
-        $this->data['templates']  = $this->templateModel->where('is_active', 1)->orderBy('is_default', 'DESC')->orderBy('id', 'ASC')->findAll();
+        $this->data['templates']  = $filteredTemplates;
         $this->data['piagamList'] = [$customItem];
         $this->data['event']      = null;
 
@@ -303,6 +871,7 @@ class Piagam extends BaseController
     {
         $showAll = (bool)$this->request->getGet('show_all');
         $query = $this->templateModel->orderBy('is_default', 'DESC')->orderBy('id', 'ASC');
+        $query->groupStart()->where('kejuaraan_id', 1)->orWhere('kejuaraan_id', null)->groupEnd();
         if (!$showAll) {
             $query->where('is_active', 1);
         }
@@ -491,7 +1060,9 @@ class Piagam extends BaseController
      */
     public function setDefaultTemplate(int $id)
     {
-        $this->templateModel->where('id !=', $id)->set(['is_default' => 0])->update();
+        $target = $this->templateModel->find($id);
+        $kId = $target['kejuaraan_id'] ?? 1;
+        $this->templateModel->where('kejuaraan_id', $kId)->where('id !=', $id)->set(['is_default' => 0])->update();
         $this->templateModel->update($id, ['is_default' => 1]);
 
         return redirect()->to(base_url('piagam/templates'))->with('success', 'Template default berhasil diatur.');
@@ -601,8 +1172,8 @@ class Piagam extends BaseController
                 foreach ($runners as $rIdx => $runnerName) {
                     $nomorPiagam = str_replace(
                         ['{nomor}', '{tahun}'],
-                        [sprintf('%03d', $seq), $tahun],
-                        $template['format_nomor'] ?? '{nomor}/SERT/PASIJATENG/IX/{tahun}'
+                        ['001', $tahun],
+                        $template['format_nomor'] ?? '001/SERT/PASIJATENG/IX/{tahun}'
                     );
 
                     $peId = (int)($w['peserta_event_id'] ?? $w['id'] ?? 0);
@@ -632,8 +1203,8 @@ class Piagam extends BaseController
             } else {
                 $nomorPiagam = str_replace(
                     ['{nomor}', '{tahun}'],
-                    [sprintf('%03d', $seq), $tahun],
-                    $template['format_nomor'] ?? '{nomor}/SERT/PASIJATENG/IX/{tahun}'
+                    ['001', $tahun],
+                    $template['format_nomor'] ?? '001/SERT/PASIJATENG/IX/{tahun}'
                 );
 
                 $peId = (int)($w['peserta_event_id'] ?? $w['id'] ?? 0);
@@ -672,7 +1243,7 @@ class Piagam extends BaseController
     {
         $db = \Config\Database::connect();
         $builder = $db->table('hasil h')
-            ->select('h.*, pe.lane as no_lintasan, pe.heat as seri, a.no_dada as nomor_dada, a.nama as nama_atlet, a.catatan as catatan_atlet, a.gender, s.nama as nama_sekolah, s.alamat as asal_daerah, e.nama_acara, e.nomor_acara, e.gender as event_gender, nl.nama as nama_lomba, nl.satuan_hasil, ku.nama as nama_ku, ku.keterangan as ket_ku')
+            ->select('h.*, pe.lane as no_lintasan, pe.heat as seri, a.id as atlet_id, a.no_dada as nomor_dada, a.nama as nama_atlet, a.catatan as catatan_atlet, a.gender, a.tanggal_lahir, a.akta_file, a.akta_url, s.nama as nama_sekolah, s.alamat as asal_daerah, e.nama_acara, e.nomor_acara, e.gender as event_gender, nl.nama as nama_lomba, nl.satuan_hasil, ku.nama as nama_ku, ku.keterangan as ket_ku')
             ->join('peserta_event pe', 'pe.id = h.peserta_event_id')
             ->join('atlet a', 'a.id = pe.atlet_id')
             ->join('sekolah s', 's.id = a.sekolah_id', 'left')
@@ -680,6 +1251,7 @@ class Piagam extends BaseController
             ->join('nomor_lomba nl', 'nl.id = e.nomor_lomba_id', 'left')
             ->join('kelompok_umur ku', 'ku.id = e.kelompok_umur_id', 'left')
             ->where('pe.event_id', $eventId)
+            ->where('LOWER(e.babak) !=', 'penyisihan')
             ->where('h.peringkat IS NOT NULL')
             ->where('h.peringkat >', 0);
 
@@ -723,7 +1295,10 @@ class Piagam extends BaseController
         $tglSelesai = $kj['tanggal_selesai'] ?? null;
 
         if (!$tglMulai) {
-            return '29 Agustus 2026';
+            if (!empty($kj['id']) && (int)$kj['id'] === 2) {
+                return '29 Agustus 2026';
+            }
+            return '27 September 2026';
         }
 
         $bulanIndo = [
@@ -766,14 +1341,119 @@ class Piagam extends BaseController
      * Halaman Publik Verifikasi Keabsahan Piagam (Tanpa Login)
      * URL: /verifikasi/piagam/{code}
      */
-    public function verifikasi(string $code)
+    public function verifikasi(...$params)
     {
-        // Parse kode: PASI-{kejuaraanId}-{eventId}-{peringkat}-{hash}
+        // 0. Ambil full path input dari parameter / URI
+        $raw = !empty($params) ? implode('/', $params) : '';
+        if (empty($raw)) {
+            $uri = service('uri');
+            $segments = $uri->getSegments();
+            $idx = array_search('piagam', $segments);
+            if ($idx !== false && isset($segments[$idx + 1])) {
+                $raw = implode('/', array_slice($segments, $idx + 1));
+            }
+        }
+
+        $code = trim($raw);
+
+        // 1. Sanitasi cerdas jika scanner kamera HP menempelkan beberapa URL sekaligus
+        if (stripos($code, 'http://') !== false || stripos($code, 'https://') !== false) {
+            $tokens = preg_split('/https?:\/\/[^\/]+\/verifikasi\/piagam\/|https?:\/\//i', $code);
+            $cleanTokens = array_values(array_filter(array_map('trim', $tokens)));
+            if (!empty($cleanTokens)) {
+                $code = end($cleanTokens);
+            }
+        }
+
+        // Cari pola PASI spesifik (ambil yang terakhir jika ada beberapa)
+        if (preg_match_all('/PASI-\d+-\d+-\d+-[a-f0-9]{8}/i', $code, $pasiMatches)) {
+            $code = end($pasiMatches[0]);
+        }
+        // Cari pola UUID spesifik jika ada
+        elseif (preg_match_all('/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i', $code, $uuidMatches)) {
+            $code = end($uuidMatches[0]);
+        }
+
+        $code = trim($code, " /");
+
+        // Helper fungsi konversi waktu resmi bahasa Indonesia
+        $formatWaktuId = function($timestamp) {
+            $ts = is_numeric($timestamp) ? $timestamp : strtotime($timestamp);
+            $waktu = date('l, d F Y', $ts) . ' pukul ' . date('H:i', $ts);
+            $hariEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            $hariId = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            $bulanEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            $bulanId = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            $waktu = str_replace($hariEn, $hariId, $waktu);
+            return str_replace($bulanEn, $bulanId, $waktu);
+        };
+
+        // 1. Cek dari piagam_custom (Kejurkot Wali Kota & sertifikat custom standalone)
+        $customWinner = $this->customModel
+            ->where('uuid', $code)
+            ->orWhere('nomor_piagam', $code)
+            ->first();
+
+        if ($customWinner) {
+            $kejuaraanId = $customWinner['kejuaraan_id'] ?? 2;
+            $kejuaraan = (new \App\Models\KejuaraanModel())->find($kejuaraanId) ?: [
+                'nama'   => $customWinner['nama_kejuaraan'] ?? 'KEJUARAAN ATLETIK KELOMPOK UMUR TINGKAT KOTA PEKALONGAN TAHUN 2026',
+                'tempat' => $customWinner['tempat'] ?? 'Stadion Hoegeng Kota Pekalongan',
+            ];
+
+            $winnerData = [
+                'nama_atlet'     => $customWinner['nama_pemenang'],
+                'sekolah'        => $customWinner['asal_sekolah'] ?: ($customWinner['asal_kota'] ?: 'Kota Pekalongan'),
+                'peringkat'      => $customWinner['peringkat'] ?? 1,
+                'peringkat_teks' => $customWinner['peringkat_teks'] ?? 'Pertama',
+                'prestasi'       => $customWinner['prestasi'] ?? '-',
+                'nomor_piagam'   => $customWinner['nomor_piagam'] ?? '-',
+            ];
+
+            $eventData = [
+                'nama_acara'   => $customWinner['nomor_lomba'] ?? 'Atletik',
+                'satuan_hasil' => '',
+            ];
+
+            $waktuTtd = !empty($customWinner['created_at'])
+                ? $formatWaktuId($customWinner['created_at'])
+                : 'Sabtu, 29 Agustus 2026 pukul 10:00';
+
+            $hashCode = hash('sha256', $code . ($customWinner['nomor_piagam'] ?? ''));
+
+            // KEJUARAAN WALI KOTA: HANYA 1 PENANDATANGAN (ZAINI, S.Pd.)
+            $signers = [
+                [
+                    'nama'     => 'Zaini, S.Pd.',
+                    'jabatan'  => 'Ketua Pengkot PASI Kota Pekalongan',
+                    'unit'     => 'PENGURUS KOTA PASI KOTA PEKALONGAN',
+                    'instansi' => 'Persatuan Atletik Seluruh Indonesia (PASI)',
+                    'waktu'    => $waktuTtd,
+                ]
+            ];
+
+            return view('piagam/verifikasi', [
+                'valid'        => true,
+                'code'         => $code,
+                'hash'         => $hashCode,
+                'winner'       => $winnerData,
+                'kejuaraan'    => $kejuaraan,
+                'event'        => $eventData,
+                'juaraText'    => $this->getJuaraText((int)($customWinner['peringkat'] ?? 1)),
+                'tanggal'      => $customWinner['tanggal'] ?? '29 Agustus 2026',
+                'nomor_piagam' => $customWinner['nomor_piagam'] ?? '-',
+                'signers'      => $signers,
+                'cetak_url'    => base_url('piagam-kejurkot/cetak/' . $customWinner['id']),
+            ]);
+        }
+
+        // 2. Parse kode untuk kejuaraan existing (Eks-Karesidenan): PASI-{kejuaraanId}-{eventId}-{peringkat}-{hash}
         if (!preg_match('/^PASI-(\d+)-(\d+)-(\d+)-([a-f0-9]{8})$/i', $code, $m)) {
             return view('piagam/verifikasi', [
                 'valid' => false,
                 'code'  => $code,
-                'error' => 'Format kode verifikasi tidak valid.',
+                'hash'  => hash('sha256', $code),
+                'error' => 'Format kode verifikasi tidak valid atau tidak terdaftar.',
             ]);
         }
 
@@ -782,7 +1462,7 @@ class Piagam extends BaseController
         $peringkat   = (int)$m[3];
         $hash        = $m[4];
 
-        // Cari peserta_event_id yang cocok (tanpa limit juara)
+        // Cari peserta_event_id yang cocok
         $winners = $this->getWinnersByEvent($eventId, 0);
         $matchedWinner = null;
         $secret = env('encryption.key', 'PASI_JATENG_2026_SECRET');
@@ -802,7 +1482,8 @@ class Piagam extends BaseController
             return view('piagam/verifikasi', [
                 'valid' => false,
                 'code'  => $code,
-                'error' => 'Piagam dengan kode ini tidak ditemukan dalam database.',
+                'hash'  => hash('sha256', $code),
+                'error' => 'Piagam dengan kode ini tidak ditemukan dalam database resmi.',
             ]);
         }
 
@@ -810,14 +1491,63 @@ class Piagam extends BaseController
         $kejuaraan = (new \App\Models\KejuaraanModel())->find($kejuaraanId);
         $event = $this->eventModel->getEventWithDetails($eventId);
 
+        // DETEKSI USIA DINI (5, 6, 7 TAHUN) VS KARESIDENAN UMUM
+        $kuId = (int)($event['kelompok_umur_id'] ?? 0);
+        $kuCheckStr = strtolower(($event['kategori_usia'] ?? '') . ' ' . ($event['nama_acara'] ?? '') . ' ' . ($event['nama_ku'] ?? '') . ' ' . ($event['keterangan'] ?? ''));
+        $isUsia567 = ($kuId === 1) || preg_match('/\b(u[\s\-_]?[567]|ku[\s\-_]?[567]|juaraku|usia[\s\-_]?dini|[567][\s\-_]?th|[567][\s\-_]?tahun)\b|5-6|567|juaraku/i', $kuCheckStr);
+
+        $waktuKares = 'Minggu, 27 September 2026 pukul 14:00';
+
+        if ($isUsia567) {
+            // USIA DINI 5, 6, 7 TH: HANYA 1 PENANDATANGAN (ZAINI, S.Pd.)
+            $signers = [
+                [
+                    'nama'     => 'Zaini, S.Pd.',
+                    'jabatan'  => 'Ketua Panitia Pelaksana',
+                    'unit'     => 'PENGURUS KOTA PASI KOTA PEKALONGAN',
+                    'instansi' => 'Persatuan Atletik Seluruh Indonesia (PASI)',
+                    'waktu'    => $waktuKares,
+                ]
+            ];
+        } else {
+            // EKS-KARESIDENAN: 3 PENANDATANGAN LENGKAP
+            $signers = [
+                [
+                    'nama'     => 'Jumanto, S.Pd., M.Si.',
+                    'jabatan'  => 'Koordinator Wilayah Eks-Karesidenan Pekalongan',
+                    'unit'     => 'KOORDINATOR WILAYAH EKS-KARESIDENAN PEKALONGAN',
+                    'instansi' => 'Persatuan Atletik Seluruh Indonesia (PASI)',
+                    'waktu'    => $waktuKares,
+                ],
+                [
+                    'nama'     => 'Zaini, S.Pd.',
+                    'jabatan'  => 'Ketua Panitia Pelaksana',
+                    'unit'     => 'PANITIA PELAKSANA KEJURWIL ATLETIK 2026',
+                    'instansi' => 'Pengkot PASI Kota Pekalongan',
+                    'waktu'    => $waktuKares,
+                ],
+                [
+                    'nama'     => 'Dr. Agus Widodo Suripto, M. Pd.',
+                    'jabatan'  => 'Plt. Ketua Umum Pengurus Provinsi PASI Jawa Tengah',
+                    'unit'     => 'PENGURUS PROVINSI PASI JAWA TENGAH',
+                    'instansi' => 'Persatuan Atletik Seluruh Indonesia (PASI)',
+                    'waktu'    => $waktuKares,
+                ],
+            ];
+        }
+
         return view('piagam/verifikasi', [
-            'valid'      => true,
-            'code'       => $code,
-            'winner'     => $matchedWinner,
-            'kejuaraan'  => $kejuaraan,
-            'event'      => $event,
-            'juaraText'  => $this->getJuaraText($peringkat),
-            'tanggal'    => $this->formatTanggalKejuaraan($kejuaraan ?: []),
+            'valid'        => true,
+            'code'         => $code,
+            'hash'         => hash('sha256', "{$kejuaraanId}-{$eventId}-" . ($matchedWinner['id'] ?? 0) . "-{$secret}"),
+            'winner'       => $matchedWinner,
+            'kejuaraan'    => $kejuaraan,
+            'event'        => $event,
+            'juaraText'    => $this->getJuaraText($peringkat),
+            'tanggal'      => $this->formatTanggalKejuaraan($kejuaraan ?: []),
+            'nomor_piagam' => $matchedWinner['nomor_piagam'] ?? "PASI-{$kejuaraanId}-{$eventId}-{$peringkat}",
+            'signers'      => $signers,
+            'cetak_url'    => base_url('piagam/cetak-event/' . $eventId),
         ]);
     }
 
@@ -854,7 +1584,28 @@ class Piagam extends BaseController
             $data['hide_title'] = (int)$this->request->getPost('hide_title');
         }
         if ($this->request->getPost('custom_offsets') !== null) {
-            $data['custom_offsets'] = (string)$this->request->getPost('custom_offsets');
+            $rawInput = trim((string)$this->request->getPost('custom_offsets'));
+            $newOffsets = json_decode($rawInput, true);
+            if (is_array($newOffsets)) {
+                // Unnest segala nested wrapper jika ada
+                while (isset($newOffsets['kejurwil']) && is_array($newOffsets['kejurwil'])) {
+                    $newOffsets = $newOffsets['kejurwil'];
+                }
+                while (isset($newOffsets['kejurkot']) && is_array($newOffsets['kejurkot'])) {
+                    $newOffsets = $newOffsets['kejurkot'];
+                }
+
+                if (isset($newOffsets['usia_567']) || isset($newOffsets['umum'])) {
+                    $data['custom_offsets'] = json_encode([
+                        'umum'     => is_array($newOffsets['umum'] ?? null) ? $newOffsets['umum'] : [],
+                        'usia_567' => is_array($newOffsets['usia_567'] ?? null) ? $newOffsets['usia_567'] : [],
+                    ]);
+                } else {
+                    $data['custom_offsets'] = json_encode($newOffsets);
+                }
+            } else {
+                $data['custom_offsets'] = $rawInput;
+            }
         }
 
         if (!empty($data)) {
@@ -933,5 +1684,648 @@ class Piagam extends BaseController
         // 6. Kota Pekalongan
         return 'Kota Pekalongan';
     }
-}
 
+    /**
+     * API: Ambil Data Akta Kelahiran Atlet untuk Preview Modal
+     * Pastikan aman (Auth check, sanitize input, return metadata)
+     */
+    public function previewAkta(int $atletId)
+    {
+        // 1. Verifikasi Autentikasi Pengguna
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'status'  => 'error',
+                'message' => 'Akses tidak diizinkan. Silakan login terlebih dahulu.',
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        $atlet = $db->table('atlet a')
+            ->select('a.id, a.nama, a.no_dada, a.gender, a.tanggal_lahir, a.catatan, a.akta_file, a.akta_url, 
+                      s.nama as nama_sekolah, s.alamat as asal_daerah, ku.nama as nama_ku')
+            ->join('sekolah s', 's.id = a.sekolah_id', 'left')
+            ->join('kelompok_umur ku', 'ku.id = a.kelompok_umur_id', 'left')
+            ->where('a.id', (int)$atletId)
+            ->get()
+            ->getRowArray();
+
+        if (!$atlet) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status'  => 'error',
+                'message' => 'Data atlet tidak ditemukan.',
+            ]);
+        }
+
+        // Cek file lokal
+        $hasLocalFile = false;
+        $fileType = null;
+        if (!empty($atlet['akta_file'])) {
+            $filename = basename($atlet['akta_file']);
+            $filePath = WRITEPATH . 'uploads/akta/' . $filename;
+            if (file_exists($filePath) && is_file($filePath)) {
+                $hasLocalFile = true;
+                $fileType = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            }
+        }
+
+        // Info audit untuk watermark
+        $userSession = $session->get('user') ?? [];
+        $adminName = $userSession['nama'] ?? ($session->get('username') ?? 'Admin');
+        $watermarkText = 'DOKUMEN RAHASIA â€¢ HANYA UNTUK VERIFIKASI KEJURWIL â€¢ ' . strtoupper($adminName) . ' â€¢ ' . date('d/m/Y H:i');
+
+        return $this->response->setJSON([
+            'status'         => 'success',
+            'atlet'          => [
+                'id'            => (int)$atlet['id'],
+                'nama'          => $atlet['nama'],
+                'no_dada'       => $atlet['no_dada'] ?: '-',
+                'gender'        => $atlet['gender'] === 'L' ? 'Laki-laki' : 'Perempuan',
+                'tanggal_lahir' => $atlet['tanggal_lahir'] ? date('d-m-Y', strtotime($atlet['tanggal_lahir'])) : '-',
+                'tgl_raw'       => $atlet['tanggal_lahir'] ?: '',
+                'nama_sekolah'  => $atlet['nama_sekolah'] ?: 'Independen',
+                'asal_daerah'   => $atlet['asal_daerah'] ?: '-',
+                'nama_ku'       => $atlet['nama_ku'] ?: '-',
+                'has_local'     => $hasLocalFile,
+                'file_type'     => $fileType,
+                'view_url'      => $hasLocalFile ? base_url('piagam/view-akta-file/' . $atlet['id']) : null,
+                'akta_url'      => !empty($atlet['akta_url']) ? $atlet['akta_url'] : null,
+            ],
+            'watermark'      => $watermarkText,
+        ]);
+    }
+
+    /**
+     * Streaming File Akta dengan Proteksi Keamanan Tinggi
+     * - Hanya user login
+     * - File di luar public directory (writable/uploads/akta/)
+     * - Anti-directory traversal
+     * - Anti-cache headers & no-sniff
+     */
+    public function viewAktaFile(int $atletId)
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Akses ditolak.');
+        }
+
+        $db = \Config\Database::connect();
+        $atlet = $db->table('atlet')->select('id, akta_file')->where('id', (int)$atletId)->get()->getRowArray();
+        if (!$atlet || empty($atlet['akta_file'])) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Dokumen tidak ditemukan.');
+        }
+
+        // Sanitasi nama file ketat (hanya alfanumerik, titik, minus, underscore)
+        $filename = basename($atlet['akta_file']);
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $filename)) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('File tidak valid.');
+        }
+
+        $baseDir = realpath(WRITEPATH . 'uploads/akta');
+        $filePath = realpath($baseDir . DIRECTORY_SEPARATOR . $filename);
+
+        // Pastikan tidak ada path traversal di luar base directory
+        if (!$filePath || strpos($filePath, $baseDir) !== 0 || !is_file($filePath)) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Dokumen tidak ditemukan.');
+        }
+
+        // Tentukan MIME type aman
+        $mime = 'application/octet-stream';
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        if (in_array($ext, ['jpg', 'jpeg'])) {
+            $mime = 'image/jpeg';
+        } elseif ($ext === 'png') {
+            $mime = 'image/png';
+        } elseif ($ext === 'webp') {
+            $mime = 'image/webp';
+        } elseif ($ext === 'pdf') {
+            $mime = 'application/pdf';
+        } else {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Format file tidak diizinkan.');
+        }
+
+        // Kirim dengan HTTP security headers lengkap
+        return $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0')
+            ->setHeader('Pragma', 'no-cache')
+            ->setHeader('Expires', '0')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setBody(file_get_contents($filePath));
+    }
+
+    /**
+     * API: Perbarui Nama Atlet Sesuai Akte Langsung dari Modal Preview
+     */
+    public function updateNamaAtlet()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'status'  => 'error',
+                'message' => 'Akses ditolak. Silakan login kembali.',
+            ]);
+        }
+
+        $atletId = (int)$this->request->getPost('atlet_id');
+        $namaBaru = trim((string)$this->request->getPost('nama'));
+
+        if (!$atletId || empty($namaBaru)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'status'  => 'error',
+                'message' => 'ID atlet dan nama baru wajib diisi.',
+            ]);
+        }
+
+        // Sanitasi teks nama
+        $namaBaru = strtoupper(strip_tags($namaBaru));
+        if (strlen($namaBaru) > 150) {
+            $namaBaru = substr($namaBaru, 0, 150);
+        }
+
+        $db = \Config\Database::connect();
+        $db->table('atlet')->where('id', $atletId)->update([
+            'nama'       => $namaBaru,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->response->setJSON([
+            'status'   => 'success',
+            'message'  => 'Nama atlet berhasil diperbarui menjadi: ' . $namaBaru,
+            'atlet_id' => $atletId,
+            'nama'     => $namaBaru,
+        ]);
+    }
+
+    /**
+     * API: Upload Berkas Akta Baru atau Update Link Google Drive untuk Atlet
+     */
+    public function uploadAkta()
+    {
+        $session = session();
+        if (!$session->get('logged_in')) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'status'  => 'error',
+                'message' => 'Sesi login telah berakhir. Silakan login kembali.',
+            ]);
+        }
+
+        $atletId = (int)$this->request->getPost('atlet_id');
+        $aktaUrl = trim((string)$this->request->getPost('akta_url'));
+        $file    = $this->request->getFile('file_akta');
+
+        $db = \Config\Database::connect();
+        $atlet = $db->table('atlet')->where('id', $atletId)->get()->getRowArray();
+        if (!$atlet) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status'  => 'error',
+                'message' => 'Data atlet tidak ditemukan.',
+            ]);
+        }
+
+        $updateData = [];
+
+        // 1. Jika ada upload file fisik
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+            $mime = $file->getMimeType();
+            if (!in_array($mime, $allowedMimes)) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Format berkas tidak diizinkan. Hanya menerima JPG, PNG, atau PDF.',
+                ]);
+            }
+
+            if ($file->getSizeByUnit('mb') > 15) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Ukuran berkas terlalu besar. Maksimum 15 MB.',
+                ]);
+            }
+
+            $storageDir = WRITEPATH . 'uploads/akta';
+            if (!is_dir($storageDir)) {
+                mkdir($storageDir, 0755, true);
+            }
+
+            $ext = strtolower($file->getClientExtension());
+            $safeName = 'akta_' . $atletId . '_' . preg_replace('/[^a-zA-Z0-9_]/', '_', strtolower($atlet['nama'])) . '.' . $ext;
+            if (strlen($safeName) > 100) {
+                $safeName = 'akta_' . $atletId . '_' . time() . '.' . $ext;
+            }
+
+            $file->move($storageDir, $safeName, true);
+            $updateData['akta_file'] = $safeName;
+        }
+
+        // 2. Jika ada update URL Drive
+        if (!empty($aktaUrl)) {
+            $updateData['akta_url'] = $aktaUrl;
+        }
+
+        if (!empty($updateData)) {
+            $updateData['updated_at'] = date('Y-m-d H:i:s');
+            $db->table('atlet')->where('id', $atletId)->update($updateData);
+
+            return $this->response->setJSON([
+                'status'  => 'success',
+                'message' => 'Dokumen Akta Kelahiran berhasil disimpan!',
+                'atlet_id'=> $atletId,
+            ]);
+        }
+
+        return $this->response->setStatusCode(400)->setJSON([
+            'status'  => 'error',
+            'message' => 'Silakan pilih berkas dokumen atau masukkan tautan Google Drive.',
+        ]);
+    }
+
+    // =========================================================================
+    // MODUL PIAGAM KEJURKOT KOTA PEKALONGAN 2026 (STANDALONE - ISOLASI TOTAL)
+    // =========================================================================
+    public const KEJURKOT_ID = 2;
+
+    /**
+     * Halaman Utama Piagam Kejurkot 2026 (Standalone & Terpisah dari Eks-Karesidenan)
+     */
+    public function kejurkotIndex()
+    {
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? self::KEJURKOT_ID;
+        $kejuaraan   = (new \App\Models\KejuaraanModel())->find($kejuaraanId);
+        if (!$kejuaraan) {
+            $kejuaraan = (new \App\Models\KejuaraanModel())
+                ->like('nama', 'KOTA PEKALONGAN')
+                ->first();
+        }
+        $kejuaraanId = $kejuaraan['id'] ?? self::KEJURKOT_ID;
+
+        // Ambil data pemenang khusus Kejurkot
+        $pemenang = $this->customModel
+            ->where('kejuaraan_id', $kejuaraanId)
+            ->orderBy('id', 'ASC')
+            ->findAll();
+
+        // Ambil template khusus Kejurkot
+        $template = $this->templateModel
+            ->where('kejuaraan_id', $kejuaraanId)
+            ->first();
+
+        if (!$template) {
+            $template = $this->templateModel->find(23);
+        }
+
+        // Hitung nomor sertifikat berikutnya
+        $nextNomorInt = count($pemenang) + 1;
+        $nextNomorFormatted = sprintf('%03d/SERT/PASI.KOTA/VIII/2026', $nextNomorInt);
+
+        // Kelompokkan pemenang berdasarkan nomor lomba (1., 2., 3., dst.)
+        $groups = [];
+        foreach ($pemenang as $p) {
+            $nomorLomba = trim($p['nomor_lomba'] ?? '');
+            if (preg_match('/^(\d+)\.\s*(.*)/', $nomorLomba, $m)) {
+                $groupNum = (int)$m[1];
+                $titleRaw = trim($m[2]);
+            } else {
+                $groupNum = 999;
+                $titleRaw = $nomorLomba ?: 'Lainnya';
+            }
+
+            if (!isset($groups[$groupNum])) {
+                $groups[$groupNum] = [
+                    'number' => $groupNum,
+                    'title'  => $titleRaw,
+                    'titles' => [],
+                    'count'  => 0,
+                    'items'  => [],
+                ];
+            }
+
+            if (!in_array($titleRaw, $groups[$groupNum]['titles'])) {
+                $groups[$groupNum]['titles'][] = $titleRaw;
+            }
+            $groups[$groupNum]['count']++;
+            $groups[$groupNum]['items'][] = $p;
+        }
+
+        // Susun judul ringkas untuk setiap nomor
+        foreach ($groups as $gNum => &$gData) {
+            if (count($gData['titles']) === 1) {
+                $gData['title'] = $gData['titles'][0];
+            } else {
+                $cleaned = [];
+                foreach ($gData['titles'] as $t) {
+                    $c = trim(preg_replace('/\b(Pa|Pi|PA|PI)\b/i', '', $t));
+                    $c = preg_replace('/\s+/', ' ', $c);
+                    if (!in_array($c, $cleaned)) {
+                        $cleaned[] = $c;
+                    }
+                }
+                $gData['title'] = implode(' & ', $cleaned);
+            }
+        }
+        unset($gData);
+        ksort($groups);
+
+        return view('piagam/kejurkot_index', [
+            'title'              => 'Piagam Kejurkot Kota Pekalongan 2026',
+            'kejuaraan'          => $kejuaraan,
+            'pemenang'           => $pemenang,
+            'groups'             => $groups,
+            'template'           => $template,
+            'totalPemenang'      => count($pemenang),
+            'nextNomorFormatted' => $nextNomorFormatted,
+            'nextNomorInt'       => $nextNomorInt,
+        ]);
+    }
+
+    /**
+     * Simpan / Tambah / Edit Pemenang Piagam Kejurkot
+     */
+    public function saveKejurkotPemenang()
+    {
+        $id = $this->request->getPost('id');
+        $namaPemenang = trim($this->request->getPost('nama_pemenang') ?? '');
+        $asalSekolah  = trim($this->request->getPost('asal_sekolah') ?? '');
+        $asalKota     = trim($this->request->getPost('asal_kota') ?? 'Kota Pekalongan');
+        $nomorLomba   = trim($this->request->getPost('nomor_lomba') ?? '');
+        $peringkat    = (int)($this->request->getPost('peringkat') ?? 1);
+        $prestasi     = trim($this->request->getPost('prestasi') ?? '-');
+        $nomorPiagam  = trim($this->request->getPost('nomor_piagam') ?? '');
+
+        if (empty($namaPemenang) || empty($nomorLomba)) {
+            return redirect()->back()->with('error', 'Nama Pemenang dan Nomor Lomba wajib diisi.');
+        }
+
+        $kejuaraan = (new \App\Models\KejuaraanModel())->find(self::KEJURKOT_ID);
+        $namaKejuaraan = $kejuaraan['nama'] ?? 'KEJUARAAN ATLETIK KELOMPOK UMUR TINGKAT KOTA PEKALONGAN TAHUN 2026';
+        $tempat = $kejuaraan['tempat'] ?? 'Stadion Hoegeng Kota Pekalongan';
+        $tanggal = '29 Agustus 2026';
+
+        // Peringkat teks
+        $peringkatTeksMap = [
+            1 => 'Pertama',
+            2 => 'Kedua',
+            3 => 'Ketiga',
+            4 => 'Keempat',
+            5 => 'Kelima'
+        ];
+        $peringkatTeks = $this->request->getPost('peringkat_teks') ?: ($peringkatTeksMap[$peringkat] ?? "Ke-{$peringkat}");
+
+        // Auto nomor sertifikat jika kosong
+        if (empty($nomorPiagam)) {
+            $count = $this->customModel->where('kejuaraan_id', self::KEJURKOT_ID)->countAllResults();
+            $nomorPiagam = sprintf('%03d/SERT/PASI.KOTA/VIII/2026', $count + 1);
+        }
+
+        // UUID
+        $uuid = $this->request->getPost('uuid');
+        if (empty($uuid)) {
+            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0x0fff) | 0x4000,
+                mt_rand(0, 0x3fff) | 0x8000,
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+        }
+
+        $data = [
+            'kejuaraan_id'    => self::KEJURKOT_ID,
+            'template_id'     => 23,
+            'uuid'            => $uuid,
+            'nomor_piagam'    => $nomorPiagam,
+            'nama_pemenang'   => $namaPemenang,
+            'asal_sekolah'    => $asalSekolah,
+            'asal_kota'       => $asalKota,
+            'peringkat'       => $peringkat,
+            'peringkat_teks'  => $peringkatTeks,
+            'nomor_lomba'     => $nomorLomba,
+            'prestasi'        => $prestasi ?: '-',
+            'nama_kejuaraan'  => $namaKejuaraan,
+            'tempat'          => $tempat,
+            'tanggal'         => $tanggal,
+            'ttd_1_jabatan'   => 'Ketua',
+            'ttd_1_nama'      => 'Zaini, S.Pd.',
+        ];
+
+        if (!empty($id)) {
+            // Update
+            $existing = $this->customModel->where('id', $id)->where('kejuaraan_id', self::KEJURKOT_ID)->first();
+            if ($existing) {
+                unset($data['uuid']); // pertahankan uuid awal
+                $this->customModel->update($id, $data);
+                return redirect()->to(base_url('piagam-kejurkot'))->with('success', 'Data pemenang berhasil diperbarui.');
+            }
+        }
+
+        $this->customModel->insert($data);
+        return redirect()->to(base_url('piagam-kejurkot'))->with('success', 'Data pemenang baru berhasil ditambahkan.');
+    }
+
+    /**
+     * Hapus Pemenang Piagam Kejurkot
+     */
+    public function deleteKejurkotPemenang($id)
+    {
+        $existing = $this->customModel->where('id', $id)->where('kejuaraan_id', self::KEJURKOT_ID)->first();
+        if ($existing) {
+            $this->customModel->delete($id);
+            return redirect()->to(base_url('piagam-kejurkot'))->with('success', 'Data pemenang berhasil dihapus.');
+        }
+        return redirect()->to(base_url('piagam-kejurkot'))->with('error', 'Data tidak ditemukan.');
+    }
+
+    /**
+     * Cetak Semua Piagam Kejurkot (Landscape A4 + Background Trophy + QR Code + TTD Zaeni)
+     */
+    public function cetakKejurkot()
+    {
+        $nomor = $this->request->getGet('nomor');
+        $builder = $this->customModel->where('kejuaraan_id', self::KEJURKOT_ID);
+
+        if (!empty($nomor)) {
+            // Filter nomor awalan, contoh: "1." atau "2."
+            $builder->like('nomor_lomba', $nomor . '.', 'after');
+        }
+
+        $pemenang = $builder->orderBy('id', 'ASC')->findAll();
+
+        if (empty($pemenang)) {
+            return redirect()->to(base_url('piagam-kejurkot'))->with('error', 'Belum ada data pemenang untuk dicetak.');
+        }
+
+        $template = $this->templateModel->find(23);
+        if (!$template) {
+            $template = $this->templateModel->where('kejuaraan_id', self::KEJURKOT_ID)->first();
+        }
+
+        $title = 'Cetak Piagam Kejurkot Kota Pekalongan 2026';
+        if (!empty($nomor)) {
+            $title .= ' - Nomor ' . $nomor;
+        }
+
+        return view('piagam/cetak_kejurkot', [
+            'title'     => $title,
+            'pemenang'  => $pemenang,
+            'template'  => $template,
+            'isSingle'  => false,
+            'nomor'     => $nomor,
+        ]);
+    }
+
+    /**
+     * Cetak Single Piagam Kejurkot
+     */
+    public function cetakKejurkotSingle($id)
+    {
+        $winner = $this->customModel
+            ->where('id', $id)
+            ->where('kejuaraan_id', self::KEJURKOT_ID)
+            ->first();
+
+        if (!$winner) {
+            return redirect()->to(base_url('piagam-kejurkot'))->with('error', 'Data pemenang tidak ditemukan.');
+        }
+
+        $template = $this->templateModel->find(23);
+        if (!$template) {
+            $template = $this->templateModel->where('kejuaraan_id', self::KEJURKOT_ID)->first();
+        }
+
+        return view('piagam/cetak_kejurkot', [
+            'title'     => 'Cetak Piagam - ' . $winner['nama_pemenang'],
+            'pemenang'  => [$winner],
+            'template'  => $template,
+            'isSingle'  => true,
+        ]);
+    }
+
+    /**
+     * Import Data Pemenang Kejurkot dari Excel / CSV / Baris Teks
+     */
+    public function importKejurkotExcel()
+    {
+        $file = $this->request->getFile('file_excel');
+        $textData = $this->request->getPost('data_teks');
+
+        $rows = [];
+
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $ext = strtolower($file->getClientExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $content = file_get_contents($file->getTempName());
+                $lines = explode("\n", $content);
+                foreach ($lines as $line) {
+                    $cols = str_getcsv(trim($line), ";");
+                    if (count($cols) < 2) $cols = str_getcsv(trim($line), ",");
+                    if (count($cols) < 2) $cols = explode("\t", trim($line));
+                    if (count($cols) >= 2) {
+                        $rows[] = array_map('trim', $cols);
+                    }
+                }
+            } elseif (in_array($ext, ['xlsx', 'xls'])) {
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getTempName());
+                    $sheet = $spreadsheet->getActiveSheet();
+                    $rows = $sheet->toArray();
+                } catch (\Throwable $e) {
+                    log_message('error', 'Excel load error: ' . $e->getMessage());
+                }
+            }
+        } elseif (!empty($textData)) {
+            $lines = explode("\n", trim($textData));
+            foreach ($lines as $line) {
+                if (empty(trim($line))) continue;
+                $cols = explode("\t", trim($line));
+                if (count($cols) < 2) $cols = explode(",", trim($line));
+                if (count($cols) < 2) $cols = explode(";", trim($line));
+                if (count($cols) >= 2) {
+                    $rows[] = array_map('trim', $cols);
+                }
+            }
+        }
+
+        if (empty($rows)) {
+            return redirect()->to(base_url('piagam-kejurkot'))->with('error', 'Tidak ada data valid yang dapat diimpor.');
+        }
+
+        $kejuaraan = (new \App\Models\KejuaraanModel())->find(self::KEJURKOT_ID);
+        $namaKejuaraan = $kejuaraan['nama'] ?? 'KEJUARAAN ATLETIK KELOMPOK UMUR TINGKAT KOTA PEKALONGAN TAHUN 2026';
+        $tempat = $kejuaraan['tempat'] ?? 'Stadion Hoegeng Kota Pekalongan';
+
+        $imported = 0;
+        $currentCount = $this->customModel->where('kejuaraan_id', self::KEJURKOT_ID)->countAllResults();
+
+        // Cek baris header
+        $firstRow = $rows[0];
+        $isHeader = false;
+        foreach ($firstRow as $c) {
+            if (in_array(strtolower(trim($c)), ['nama', 'nama pemenang', 'nama atlet', 'nomor lomba', 'juara', 'peringkat'])) {
+                $isHeader = true;
+                break;
+            }
+        }
+        $startIndex = $isHeader ? 1 : 0;
+
+        $peringkatTeksMap = [1 => 'Pertama', 2 => 'Kedua', 3 => 'Ketiga', 4 => 'Keempat', 5 => 'Kelima'];
+
+        for ($i = $startIndex; $i < count($rows); $i++) {
+            $r = $rows[$i];
+            if (empty($r[0])) continue;
+
+            $nama = $r[0] ?? '';
+            $asal = $r[1] ?? 'Kota Pekalongan';
+            $nomorLomba = $r[2] ?? 'Lari 100m';
+            $peringkat = isset($r[3]) ? (int)preg_replace('/[^0-9]/', '', $r[3]) : 1;
+            if ($peringkat <= 0) $peringkat = 1;
+            $prestasi = $r[4] ?? '-';
+            $nomorPiagam = $r[5] ?? '';
+
+            if (empty($nomorPiagam)) {
+                $nomorPiagam = sprintf('%03d/SERT/PASI.KOTA/VIII/2026', $currentCount + $imported + 1);
+            }
+
+            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0x0fff) | 0x4000,
+                mt_rand(0, 0x3fff) | 0x8000,
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+
+            $this->customModel->insert([
+                'kejuaraan_id'    => self::KEJURKOT_ID,
+                'template_id'     => 23,
+                'uuid'            => $uuid,
+                'nomor_piagam'    => $nomorPiagam,
+                'nama_pemenang'   => $nama,
+                'asal_sekolah'    => $asal,
+                'asal_kota'       => $asal,
+                'peringkat'       => $peringkat,
+                'peringkat_teks'  => $peringkatTeksMap[$peringkat] ?? "Ke-{$peringkat}",
+                'nomor_lomba'     => $nomorLomba,
+                'prestasi'        => $prestasi ?: '-',
+                'nama_kejuaraan'  => $namaKejuaraan,
+                'tempat'          => $tempat,
+                'tanggal'         => '29 Agustus 2026',
+                'ttd_1_jabatan'   => 'Ketua',
+                'ttd_1_nama'      => 'Zaini, S.Pd.',
+            ]);
+
+            $imported++;
+        }
+
+        return redirect()->to(base_url('piagam-kejurkot'))->with('success', "Berhasil mengimpor {$imported} data pemenang.");
+    }
+
+    /**
+     * Endpoint API / Form untuk update cepat tanggal kejuaraan langsung dari modul Piagam
+     */
+    public function updateTanggal()
+    {
+        $kejuaraanController = new \App\Controllers\Kejuaraan();
+        $kejuaraanController->initController($this->request, $this->response, $this->logger);
+        return $kejuaraanController->updateTanggal();
+    }
+}

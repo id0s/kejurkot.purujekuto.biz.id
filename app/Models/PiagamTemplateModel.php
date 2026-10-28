@@ -13,6 +13,7 @@ class PiagamTemplateModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
+        'kejuaraan_id',
         'nama',
         'orientasi',
         'tipe',
@@ -75,7 +76,7 @@ class PiagamTemplateModel extends Model
             `kalimat_pembuka` TEXT NULL,
             `kalimat_penghargaan` TEXT NULL,
             `ttd_1_jabatan` VARCHAR(150) DEFAULT 'A.n Ketua Umum PASI Jawa Tengah\\nSekretaris Umum',
-            `ttd_1_nama` VARCHAR(150) DEFAULT 'Dr. Hermahayu, M.Si',
+            `ttd_1_nama` VARCHAR(150) DEFAULT 'Jumanto, S.Pd., M.Si.',
             `ttd_1_image` VARCHAR(255) NULL,
             `ttd_2_jabatan` VARCHAR(150) DEFAULT 'Koordinator Wilayah',
             `ttd_2_nama` VARCHAR(150) DEFAULT 'Drs. Sukono, M.Or.',
@@ -126,7 +127,7 @@ class PiagamTemplateModel extends Model
                     'kalimat_pembuka'     => 'Dengan ini Persatuan Atletik Seluruh Indonesia ( PASI ) Provinsi Jawa Tengah memberikan Piagam Penghargaan kepada :',
                     'kalimat_penghargaan' => 'Atas Partisipasinya sebagai Juara ( {juara} ) {juara_teks} Nomor {nomor_lomba} dalam {nama_kejuaraan} yang diselenggarakan pada tanggal {tanggal} di {tempat}.',
                     'ttd_1_jabatan'       => "A.n Ketua Umum\nPASI Jawa Tengah\nSekretaris Umum",
-                    'ttd_1_nama'          => 'Dr. Hermahayu, M.Si',
+                    'ttd_1_nama'          => 'Jumanto, S.Pd., M.Si.',
                     'ttd_1_image'         => null,
                     'ttd_2_jabatan'       => 'Koordinator Wilayah',
                     'ttd_2_nama'          => 'Drs. Sukono, M.Or.',
@@ -198,7 +199,7 @@ class PiagamTemplateModel extends Model
                     'kalimat_pembuka'     => 'Dengan ini Persatuan Atletik Seluruh Indonesia ( PASI ) Provinsi Jawa Tengah memberikan Piagam Penghargaan kepada :',
                     'kalimat_penghargaan' => 'Atas Partisipasinya sebagai Juara ( {juara} ) {juara_teks} Nomor {nomor_lomba} dalam {nama_kejuaraan} yang diselenggarakan pada tanggal {tanggal} di {tempat}.',
                     'ttd_1_jabatan'       => "A.n Ketua Umum\nPASI Jawa Tengah\nSekretaris Umum",
-                    'ttd_1_nama'          => 'Dr. Hermahayu, M.Si',
+                    'ttd_1_nama'          => 'Jumanto, S.Pd., M.Si.',
                     'ttd_1_image'         => null,
                     'ttd_2_jabatan'       => 'Koordinator Wilayah',
                     'ttd_2_nama'          => 'Drs. Sukono, M.Or.',
@@ -222,7 +223,7 @@ class PiagamTemplateModel extends Model
                     'kalimat_pembuka'     => 'Dengan ini memberikan anugerah Piagam Kehormatan & Prestasi kepada :',
                     'kalimat_penghargaan' => 'Atas dedikasi dan keberhasilannya meraih Juara ( {juara} ) {juara_teks} Nomor {nomor_lomba} dalam {nama_kejuaraan} yang diselenggarakan pada tanggal {tanggal} di {tempat}.',
                     'ttd_1_jabatan'       => "A.n Ketua Umum\nPASI Jawa Tengah\nSekretaris Umum",
-                    'ttd_1_nama'          => 'Dr. Hermahayu, M.Si',
+                    'ttd_1_nama'          => 'Jumanto, S.Pd., M.Si.',
                     'ttd_1_image'         => null,
                     'ttd_2_jabatan'       => 'Koordinator Wilayah',
                     'ttd_2_nama'          => 'Drs. Sukono, M.Or.',
@@ -280,7 +281,7 @@ class PiagamTemplateModel extends Model
                     'kalimat_pembuka'     => 'Dengan ini Persatuan Atletik Seluruh Indonesia ( PASI ) Provinsi Jawa Tengah memberikan Piagam Penghargaan kepada :',
                     'kalimat_penghargaan' => 'Atas Partisipasinya sebagai Juara ( {juara} ) {juara_teks} Nomor {nomor_lomba} dalam {nama_kejuaraan} yang diselenggarakan pada tanggal {tanggal} di {tempat}.',
                     'ttd_1_jabatan'       => "A.n Ketua Umum\nPASI Jawa Tengah\nSekretaris Umum",
-                    'ttd_1_nama'          => 'Dr. Hermahayu, M.Si',
+                    'ttd_1_nama'          => 'Jumanto, S.Pd., M.Si.',
                     'ttd_2_jabatan'       => 'Koordinator Wilayah',
                     'ttd_2_nama'          => 'Drs. Sukono, M.Or.',
                     'ttd_3_jabatan'       => 'Ketua Penyelenggara',
@@ -304,7 +305,7 @@ class PiagamTemplateModel extends Model
                     'kalimat_pembuka'     => 'Dengan ini memberikan anugerah Piagam Kehormatan & Prestasi kepada :',
                     'kalimat_penghargaan' => 'Atas dedikasi dan keberhasilannya meraih Juara ( {juara} ) {juara_teks} Nomor {nomor_lomba} dalam {nama_kejuaraan} yang diselenggarakan pada tanggal {tanggal} di {tempat}.',
                     'ttd_1_jabatan'       => "A.n Ketua Umum\nPASI Jawa Tengah\nSekretaris Umum",
-                    'ttd_1_nama'          => 'Dr. Hermahayu, M.Si',
+                    'ttd_1_nama'          => 'Jumanto, S.Pd., M.Si.',
                     'ttd_2_jabatan'       => 'Koordinator Wilayah',
                     'ttd_2_nama'          => 'Drs. Sukono, M.Or.',
                     'ttd_3_jabatan'       => 'Ketua Penyelenggara',
@@ -352,7 +353,7 @@ class PiagamTemplateModel extends Model
                     'kalimat_pembuka'     => 'Dengan ini memberikan anugerah apresiasi dan kehormatan setinggi-tingginya kepada :',
                     'kalimat_penghargaan' => 'Atas dedikasi dan prestasi gemilang meraih Juara ( {juara} ) {juara_teks} Nomor {nomor_lomba} dalam {nama_kejuaraan} yang diselenggarakan pada tanggal {tanggal} di {tempat}.',
                     'ttd_1_jabatan'       => "A.n Ketua Umum\nPASI Jawa Tengah\nSekretaris Umum",
-                    'ttd_1_nama'          => 'Dr. Hermahayu, M.Si',
+                    'ttd_1_nama'          => 'Jumanto, S.Pd., M.Si.',
                     'ttd_2_jabatan'       => 'Koordinator Wilayah',
                     'ttd_2_nama'          => 'Drs. Sukono, M.Or.',
                     'ttd_3_jabatan'       => 'Ketua Penyelenggara',
@@ -392,17 +393,28 @@ class PiagamTemplateModel extends Model
     /**
      * Dapatkan template default aktif
      */
-    public function getDefaultTemplate(): ?array
+    public function getByKejuaraan($kejuaraanId)
+    {
+        return $this->where('kejuaraan_id', $kejuaraanId)
+                    ->where('is_active', 1)
+                    ->findAll();
+    }
+
+    /**
+     * Dapatkan template default aktif
+     */
+    public function getDefaultTemplate(?int $kejuaraanId = null): ?array
     {
         $this->initializeTable();
-        $def = $this->where('is_active', 1)->where('is_default', 1)->first();
-        if (!$def) {
-            $def = $this->where('is_active', 1)->first();
+        $builder = $this->where('is_active', 1);
+        if ($kejuaraanId !== null) {
+            $builder->where('kejuaraan_id', $kejuaraanId);
         }
+        $def = (clone $builder)->where('is_default', 1)->first();
         if (!$def) {
-            $def = $this->where('is_default', 1)->first();
+            $def = (clone $builder)->first();
         }
-        if (!$def) {
+        if (!$def && $kejuaraanId === null) {
             $def = $this->first();
         }
         return $def;

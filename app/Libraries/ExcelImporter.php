@@ -69,6 +69,19 @@ class ExcelImporter
         // Cache kelompok umur
         $allKU = $this->kuModel->findAll();
 
+        // Deteksi kolom Akta Kelahiran dari header baris 1
+        $highestColumn = $sheet->getHighestColumn();
+        $colAkta = null;
+        $highestColIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+        for ($c = 1; $c <= $highestColIdx; $c++) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c);
+            $hVal = strtolower(trim((string)$sheet->getCell($colLetter . '1')->getValue()));
+            if (str_contains($hVal, 'akta') || str_contains($hVal, 'kelahiran')) {
+                $colAkta = $colLetter;
+                break;
+            }
+        }
+
         for ($row = 2; $row <= $highestRow; $row++) {
             $nama = trim((string)$sheet->getCell('C' . $row)->getValue());
             if (empty($nama)) {
@@ -79,6 +92,14 @@ class ExcelImporter
             $asalSekolah = trim((string)$sheet->getCell('D' . $row)->getValue());
             $tglLahirRaw = $sheet->getCell('E' . $row)->getValue();
             $nomorLomba  = trim((string)$sheet->getCell('F' . $row)->getValue());
+
+            $aktaUrl = null;
+            if ($colAkta) {
+                $valAkta = trim((string)$sheet->getCell($colAkta . $row)->getValue());
+                if (!empty($valAkta) && (str_contains($valAkta, 'http') || str_contains($valAkta, 'drive.google.com'))) {
+                    $aktaUrl = $valAkta;
+                }
+            }
             $genderRaw   = strtoupper(trim((string)$sheet->getCell('H' . $row)->getValue()));
             $gender      = ($genderRaw === 'P' || str_contains($genderRaw, 'PUTRI')) ? 'P' : 'L';
 
@@ -118,15 +139,22 @@ class ExcelImporter
             if ($existingAtlet) {
                 $atletId = (int)$existingAtlet['id'];
                 $stats['atlet_terdaftar']++;
+                if (!empty($aktaUrl) && empty($existingAtlet['akta_url'])) {
+                    $this->atletModel->update($atletId, ['akta_url' => $aktaUrl]);
+                }
             } else {
-                $atletId = (int)$this->atletModel->insert([
+                $insertData = [
                     'kejuaraan_id'     => $kejuaraanId,
                     'sekolah_id'       => $sekolahId,
                     'nama'             => $nama,
                     'gender'           => $gender,
                     'tanggal_lahir'    => $tanggalLahir,
                     'kelompok_umur_id' => $kuId,
-                ]);
+                ];
+                if (!empty($aktaUrl)) {
+                    $insertData['akta_url'] = $aktaUrl;
+                }
+                $atletId = (int)$this->atletModel->insert($insertData);
                 $stats['atlet_baru']++;
             }
 

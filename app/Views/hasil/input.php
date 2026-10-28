@@ -21,6 +21,10 @@
                 <?php else: ?>
                     <span class="badge badge-purple fs-6"><i class="bi bi-people-fill me-1"></i> MIX (Campuran)</span>
                 <?php endif; ?>
+                <span class="badge <?= ($event['status'] ?? '') === 'Selesai' ? 'badge-emerald' : (($event['status'] ?? '') === 'Berlangsung' ? 'badge-amber' : 'badge-blue') ?> fs-6">
+                    <i class="bi <?= ($event['status'] ?? '') === 'Selesai' ? 'bi-check-circle-fill' : 'bi-activity' ?> me-1"></i>
+                    Status: <?= esc($event['status'] ?? 'Belum Dimulai') ?>
+                </span>
             </div>
             <?php 
             $gSuffix = ($event['gender'] === 'L') ? 'Male' : (($event['gender'] === 'P') ? 'Female' : 'MIX');
@@ -52,14 +56,20 @@
             <a href="<?= base_url('hasil/form-lapangan/' . $event['id']) ?>" target="_blank" class="btn btn-outline-warning text-warning d-inline-flex align-items-center gap-1" title="Cetak Formulir Blangko Pertandingan Lapangan untuk Juri">
                 <i class="bi bi-file-earmark-spreadsheet"></i> Blangko Form Lapangan (Juri)
             </a>
-            <a href="<?= base_url('piagam/cetak-event/' . $event['id']) ?>" target="_blank" class="btn btn-secondary-custom d-inline-flex align-items-center gap-1 shadow-sm">
-                <i class="bi bi-award-fill text-warning"></i> Cetak Piagam Juara
-            </a>
+            <?php if (strcasecmp($event['babak'] ?? '', 'Penyisihan') !== 0): ?>
+                <a href="<?= base_url('piagam/cetak-event/' . $event['id']) ?>" target="_blank" class="btn btn-secondary-custom d-inline-flex align-items-center gap-1 shadow-sm">
+                    <i class="bi bi-award-fill text-warning"></i> Cetak Piagam Juara
+                </a>
+            <?php endif; ?>
             <?php if (strcasecmp($event['babak'], 'Final') === 0 && !empty($pesertaList)): ?>
                 <a href="<?= base_url('hasil/reset-final/' . $event['id']) ?>" class="btn btn-outline-danger fw-bold d-inline-flex align-items-center gap-1 shadow-sm" onclick="return confirm('PERINGATAN:\nApakah Anda yakin ingin MERESET (MENGOSONGKAN) seluruh peserta di Babak Final ini?\n\nGunakan ini jika sebelumnya salah klik loloskan atau ingin mengulang seleksi dari babak penyisihan.')">
                     <i class="bi bi-arrow-counterclockwise"></i> Reset Finalis
                 </a>
             <?php endif; ?>
+            <a href="<?= base_url('hasil/toggle-status/' . $event['id']) ?>" class="btn btn-sm <?= ($event['status'] ?? '') === 'Selesai' ? 'btn-outline-warning' : 'btn-outline-success' ?> d-inline-flex align-items-center gap-1 shadow-sm" title="Ubah status acara">
+                <i class="bi <?= ($event['status'] ?? '') === 'Selesai' ? 'bi-arrow-counterclockwise' : 'bi-check2-circle' ?>"></i>
+                <span><?= ($event['status'] ?? '') === 'Selesai' ? 'Tandai Berlangsung' : 'Tandai Selesai' ?></span>
+            </a>
             <a href="<?= base_url('hasil/auto-rank/' . $event['id']) ?>" class="btn btn-primary-gradient" onclick="return confirm('Hitung otomatis ranking 1, 2, 3 dan medali berdasarkan catatan prestasi yang telah diinput?')">
                 <i class="bi bi-magic me-1"></i> Auto Ranking & Medali
             </a>
@@ -143,13 +153,151 @@
     </div>
 <?php endif; ?>
 
+<?php $isEventSelesai = (($event['status'] ?? '') === 'Selesai'); ?>
+
+<?php if ($isEventSelesai): ?>
+    <div class="alert alert-success py-3 px-4 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 shadow-sm" style="border-left: 5px solid #10b981 !important; background: rgba(16, 185, 129, 0.15);">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> ACARA SELESAI</span>
+                <strong class="text-white fs-6">Rekapitulasi Hasil Resmi Acara Ini Telah Selesai & Terkunci</strong>
+            </div>
+            <p class="mb-0 text-muted small">
+                Form isian inputan dinonaktifkan karena perlombaan sudah selesai. Hasil rekapitulasi resmi ditampilkan di bawah.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="<?= base_url('hasil/cetak-hasil/' . $event['id']) ?>" target="_blank" class="btn btn-sm btn-info text-dark fw-bold">
+                <i class="bi bi-printer-fill me-1"></i> Cetak Meet Manager
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-warning text-nowrap fw-bold" id="btnToggleEditForm">
+                <i class="bi bi-pencil-square me-1"></i> Buka Form Input / Edit
+            </button>
+        </div>
+    </div>
+
+    <!-- Read-Only View Mode Table (Hasil Resmi Selesai - Tanpa Kotak Inputan) -->
+    <div class="card-custom mb-4" id="viewModeCard">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="fw-bold text-white">
+                <i class="bi bi-trophy-fill me-2 text-warning"></i> Rekapitulasi Hasil Resmi Perlombaan
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge badge-emerald px-3 py-1 fs-6">
+                    <i class="bi bi-shield-check me-1"></i> Hasil Terkunci
+                </span>
+                <button type="button" class="btn btn-sm btn-warning text-dark fw-bold btn-trigger-edit-mode">
+                    <i class="bi bi-pencil-square me-1"></i> Edit / Revisi Nilai
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-dark-custom mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th width="70" class="text-center">Rank</th>
+                            <th width="95" class="text-center">Hit / Lnt</th>
+                            <th width="85" class="text-center">No Dada</th>
+                            <th>Nama Atlet</th>
+                            <th>Asal Sekolah</th>
+                            <th width="150" class="text-center text-info"><?= ($isFieldEvent ?? false) ? 'Prestasi Terbaik (m)' : 'Catatan Waktu' ?></th>
+                            <th width="130" class="text-center">Medali</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $viewList = $pesertaList;
+                        usort($viewList, function($a, $b) use ($isFieldEvent) {
+                            $ra = !empty($a['peringkat']) ? (int)$a['peringkat'] : 999999;
+                            $rb = !empty($b['peringkat']) ? (int)$b['peringkat'] : 999999;
+                            if ($ra !== $rb) return $ra <=> $rb;
+
+                            $va = $a['nilai_angka'] !== null ? (float)$a['nilai_angka'] : null;
+                            $vb = $b['nilai_angka'] !== null ? (float)$b['nilai_angka'] : null;
+                            if ($va !== null && $vb !== null) {
+                                return ($isFieldEvent ?? false) ? ($vb <=> $va) : ($va <=> $vb);
+                            }
+                            return 0;
+                        });
+
+                        foreach ($viewList as $p): 
+                            $rank = !empty($p['peringkat']) ? (int)$p['peringkat'] : null;
+                            $medali = $p['medali'] ?? 'None';
+                            $status = strtoupper($p['status_prestasi'] ?? 'VALID');
+                            $prestasi = !empty($p['prestasi']) ? esc($p['prestasi']) : ($status !== 'VALID' ? $status : '-');
+                        ?>
+                        <tr>
+                            <td class="text-center">
+                                <?php if ($rank === 1): ?>
+                                    <span class="badge bg-warning text-dark fw-bold px-2 py-1 fs-6">🥇 1</span>
+                                <?php elseif ($rank === 2): ?>
+                                    <span class="badge bg-secondary text-white fw-bold px-2 py-1 fs-6">🥈 2</span>
+                                <?php elseif ($rank === 3): ?>
+                                    <span class="badge text-white fw-bold px-2 py-1 fs-6" style="background: #cd7f32;">🥉 3</span>
+                                <?php elseif ($rank): ?>
+                                    <span class="badge bg-dark border border-secondary text-light fw-bold"><?= $rank ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center font-monospace small">
+                                Hit <?= $p['heat'] ?: 1 ?> / Lnt <?= $p['lane'] ?: '-' ?>
+                            </td>
+                            <td class="text-center fw-bold text-white">
+                                <?= esc(ltrim($p['no_dada'] ?? '', "'") ?: '-') ?>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-white"><?= esc($p['nama_atlet']) ?></div>
+                            </td>
+                            <td>
+                                <span class="text-muted small"><?= esc($p['nama_sekolah'] ?: '-') ?></span>
+                            </td>
+                            <td class="text-center font-monospace fw-bold text-info fs-6">
+                                <?= $prestasi ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if ($medali === 'Emas'): ?>
+                                    <span class="badge bg-warning text-dark fw-bold">🥇 Emas</span>
+                                <?php elseif ($medali === 'Perak'): ?>
+                                    <span class="badge bg-secondary text-white fw-bold">🥈 Perak</span>
+                                <?php elseif ($medali === 'Perunggu'): ?>
+                                    <span class="badge text-white fw-bold" style="background: #cd7f32;">🥉 Perunggu</span>
+                                <?php else: ?>
+                                    <span class="text-muted small">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="small text-muted">
+                                <?= esc($p['ket_hasil'] ?? '-') ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
 <!-- Input Form Card -->
-<div class="card-custom">
+<div class="card-custom mb-4" id="inputFormCard" style="<?= $isEventSelesai ? 'display: none;' : '' ?>">
+    <?php if ($isEventSelesai): ?>
+        <div class="p-3 bg-warning text-dark d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-pencil-square me-2"></i> <strong>Mode Edit Inputan Aktif:</strong> Anda dapat mengubah data lalu klik tombol Simpan Semua Hasil.</span>
+            <button type="button" class="btn btn-sm btn-dark text-warning fw-bold" id="btnCancelEditMode">
+                <i class="bi bi-x-circle me-1"></i> Tutup Mode Edit
+            </button>
+        </div>
+    <?php endif; ?>
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="fw-bold text-white">
             <i class="bi bi-stopwatch-fill me-2 text-warning"></i> Form Pencatatan Hasil Perlombaan
         </span>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-info text-dark fw-bold d-inline-flex align-items-center gap-1 shadow-sm" id="btnAutoRankFastest" title="Otomatis beri peringkat 1 s/d N ke seluruh peserta berdasarkan waktu tercepat / jarak terjauh">
+                <i class="bi bi-sort-numeric-down"></i>
+                <span>Auto Isi Peringkat Form</span>
+            </button>
             <button type="button" class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1" id="btnResetAllRank" title="Kosongkan semua peringkat & medali di tabel ini">
                 <i class="bi bi-arrow-counterclockwise"></i>
                 <span>Reset Peringkat</span>
@@ -402,6 +550,144 @@
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Section Rekap Ranking Gabungan Seluruh Heat (Compiled by Time) -->
+<?php 
+// Siapkan daftar atlet valid untuk rekapitulasi ranking gabungan seluruh heat
+$crossHeatValid = [];
+$heatsFastest = []; // Simpan pelari tercepat di tiap heat (Juara Hit)
+
+if (!empty($pesertaList)) {
+    foreach ($pesertaList as $p) {
+        $st = strtoupper($p['status_prestasi'] ?? 'VALID');
+        $pr = trim($p['prestasi'] ?? '');
+        $val = $p['nilai_angka'] !== null && $p['nilai_angka'] !== '' ? (float)$p['nilai_angka'] : null;
+
+        if ($st === 'VALID' && $pr !== '' && !in_array(strtoupper($pr), ['DNS', 'DNF', 'DQ', 'NM', '-']) && $val !== null && $val > 0) {
+            $crossHeatValid[] = $p;
+            $hNum = (int)($p['heat'] ?: 1);
+            if (!isset($heatsFastest[$hNum]) || 
+                (($isFieldEvent ?? false) ? ($val > (float)$heatsFastest[$hNum]['nilai_angka']) : ($val < (float)$heatsFastest[$hNum]['nilai_angka']))) {
+                $heatsFastest[$hNum] = $p;
+            }
+        }
+    }
+
+    // Urutkan crossHeatValid berdasarkan nilai_angka
+    usort($crossHeatValid, function($a, $b) use ($isFieldEvent) {
+        $va = (float)($a['nilai_angka'] ?? 0);
+        $vb = (float)($b['nilai_angka'] ?? 0);
+        return ($isFieldEvent ?? false) ? ($vb <=> $va) : ($va <=> $vb);
+    });
+}
+?>
+
+<?php if (!empty($crossHeatValid) && ($hasMultipleHeats || strcasecmp($event['babak'], 'Penyisihan') === 0)): ?>
+<div class="card-custom mt-4 p-4 shadow-sm" style="border: 1px solid rgba(13, 110, 253, 0.35); background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%);">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <h5 class="fw-bold text-white mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-sort-numeric-down text-warning"></i>
+                Rekap Ranking Gabungan Seluruh Heat (Compiled by <?= ($isFieldEvent ?? false) ? 'Mark' : 'Time' ?>)
+            </h5>
+            <p class="text-muted small mb-0">
+                Peringkat diurutkan berdasarkan <strong>catatan <?= ($isFieldEvent ?? false) ? 'jarak terjauh' : 'waktu tercepat absolut' ?></strong> dari seluruh hit (Hit 1 s/d <?= count($allHeatsList) ?>).
+                <?php if (strcasecmp($event['babak'], 'Penyisihan') === 0): ?>
+                    <span class="text-success fw-semibold">&bull; 8 Pelari Teratas Berhak Lolos ke Babak Final.</span>
+                <?php endif; ?>
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary px-3 py-2 fs-6">
+                Total: <?= count($crossHeatValid) ?> Atlet Tercatat
+            </span>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-dark-custom table-hover align-middle mb-0">
+            <thead>
+                <tr style="background: rgba(255, 255, 255, 0.05);">
+                    <th width="65" class="text-center">RANK</th>
+                    <th width="105" class="text-center">HIT / LNT</th>
+                    <th width="85" class="text-center">NO DADA</th>
+                    <th>NAMA ATLET</th>
+                    <th>ASAL SEKOLAH</th>
+                    <th width="130" class="text-center text-info"><?= ($isFieldEvent ?? false) ? 'PRESTASI (m)' : 'CATATAN WAKTU' ?></th>
+                    <th width="140" class="text-center">JUARA HIT</th>
+                    <th width="170" class="text-center">STATUS KUALIFIKASI / MEDALI</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                $rankNum = 1;
+                foreach ($crossHeatValid as $p): 
+                    $hNum = (int)($p['heat'] ?: 1);
+                    $isHeatWinner = isset($heatsFastest[$hNum]) && $heatsFastest[$hNum]['id'] == $p['id'];
+                    $isQualFinal = (strcasecmp($event['babak'], 'Penyisihan') === 0 && $rankNum <= 8);
+                    $isFinal = (strcasecmp($event['babak'], 'Final') === 0);
+                    $rowBg = $isQualFinal ? 'rgba(16, 185, 129, 0.08)' : ($rankNum <= 3 && $isFinal ? 'rgba(245, 158, 11, 0.08)' : '');
+                ?>
+                <tr style="<?= $rowBg ? 'background: ' . $rowBg . ';' : '' ?>">
+                    <td class="text-center">
+                        <?php if ($rankNum === 1): ?>
+                            <span class="badge bg-warning text-dark fw-bold px-2 py-1 fs-6">🥇 1</span>
+                        <?php elseif ($rankNum === 2): ?>
+                            <span class="badge bg-secondary text-white fw-bold px-2 py-1 fs-6">🥈 2</span>
+                        <?php elseif ($rankNum === 3): ?>
+                            <span class="badge text-white fw-bold px-2 py-1 fs-6" style="background: #cd7f32;">🥉 3</span>
+                        <?php elseif ($isQualFinal): ?>
+                            <span class="badge bg-success fw-bold px-2 py-1"><?= $rankNum ?></span>
+                        <?php else: ?>
+                            <span class="text-muted fw-semibold"><?= $rankNum ?></span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-center font-monospace">
+                        <span class="badge bg-dark border border-secondary text-light">Hit <?= $p['heat'] ?: 1 ?> / Lnt <?= $p['lane'] ?: '-' ?></span>
+                    </td>
+                    <td class="text-center">
+                        <strong class="text-white"><?= esc(ltrim($p['no_dada'] ?? '', "'") ?: '-') ?></strong>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-white"><?= esc($p['nama_atlet']) ?></div>
+                    </td>
+                    <td>
+                        <span class="text-muted small"><?= esc($p['nama_sekolah'] ?: '-') ?></span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-bold text-info fs-6 font-monospace"><?= esc($p['prestasi']) ?></span>
+                    </td>
+                    <td class="text-center">
+                        <?php if ($isHeatWinner): ?>
+                            <span class="badge bg-warning text-dark fw-semibold" title="Waktu tercepat pada Hit <?= $hNum ?>">
+                                <i class="bi bi-star-fill text-danger me-1"></i>Juara Hit <?= $hNum ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="text-muted small">-</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-center">
+                        <?php if ($isQualFinal): ?>
+                            <span class="badge bg-success px-2 py-1 fw-bold">
+                                <i class="bi bi-check-circle-fill me-1"></i>LOLOS FINAL (Q)
+                            </span>
+                        <?php elseif ($isFinal && $rankNum === 1): ?>
+                            <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-trophy-fill me-1"></i>MEDALI EMAS</span>
+                        <?php elseif ($isFinal && $rankNum === 2): ?>
+                            <span class="badge bg-secondary text-white fw-bold"><i class="bi bi-trophy-fill me-1"></i>MEDALI PERAK</span>
+                        <?php elseif ($isFinal && $rankNum === 3): ?>
+                            <span class="badge text-white fw-bold" style="background:#cd7f32;"><i class="bi bi-trophy-fill me-1"></i>MEDALI PERUNGGU</span>
+                        <?php else: ?>
+                            <span class="text-muted small">Peringkat <?= $rankNum ?></span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php $rankNum++; endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- CSS Styles untuk Floating Scroll Time Picker -->
 <style>
@@ -1091,6 +1377,94 @@ $(document).ready(function () {
         }
     });
 
+    // Auto Isi Peringkat Form Berdasarkan Catatan Waktu Tercepat / Prestasi Terbaik
+    $('#btnAutoRankFastest').on('click', function () {
+        const isField = <?= ($isFieldEvent ?? false) ? 'true' : 'false' ?>;
+        const isFinal = <?= ($event['babak'] === 'Final') ? 'true' : 'false' ?>;
+        let entries = [];
+
+        // Parse semua baris yang memiliki nilai waktu / prestasi
+        $('tbody tr').each(function () {
+            const tr = $(this);
+            const rankInput = tr.find('.rank-input-field');
+            if (rankInput.length === 0) return;
+
+            let val = null;
+            let timeStr = '';
+
+            if (isField) {
+                const bVal = parseFloat(tr.find('.field-best-val').val() || 0);
+                if (bVal > 0) val = bVal;
+            } else {
+                const timeField = tr.find('.time-input-field');
+                if (timeField.length > 0) {
+                    timeStr = timeField.val().trim();
+                    if (timeStr !== '' && !['DNS', 'DNF', 'DQ', 'NM', '-'].includes(timeStr.toUpperCase())) {
+                        if (timeStr.includes(':')) {
+                            const parts = timeStr.split(':');
+                            const min = parseFloat(parts[0]) || 0;
+                            const sec = parseFloat(parts[1]) || 0;
+                            val = (min * 60) + sec;
+                        } else {
+                            val = parseFloat(timeStr) || 0;
+                        }
+                    }
+                }
+            }
+
+            if (val !== null && val > 0) {
+                entries.push({
+                    tr: tr,
+                    val: val,
+                    rankInput: rankInput,
+                    medaliSelect: tr.find('select[name*="[medali]"]')
+                });
+            } else {
+                rankInput.val('').trigger('input');
+                tr.find('select[name*="[medali]"]').val('None').trigger('change');
+            }
+        });
+
+        if (entries.length === 0) {
+            alert('Belum ada catatan waktu/prestasi yang diisi pada baris peserta. Silakan isi catatan waktu terlebih dahulu.');
+            return;
+        }
+
+        // Urutkan: Waktu (kecil ke besar / cepat ke lambat), Lapangan (besar ke kecil / jauh ke dekat)
+        entries.sort(function (a, b) {
+            return isField ? (b.val - a.val) : (a.val - b.val);
+        });
+
+        // Tetapkan peringkat 1, 2, 3...
+        entries.forEach(function (entry, index) {
+            const rank = index + 1;
+            entry.rankInput.val(rank).trigger('input');
+            entry.tr.find('.btn-reset-row-rank').show();
+
+            // Jika Babak Final, otomatis set medali 1=Emas, 2=Perak, 3=Perunggu
+            if (isFinal) {
+                if (rank === 1) {
+                    entry.medaliSelect.val('Emas').trigger('change');
+                } else if (rank === 2) {
+                    entry.medaliSelect.val('Perak').trigger('change');
+                } else if (rank === 3) {
+                    entry.medaliSelect.val('Perunggu').trigger('change');
+                } else {
+                    entry.medaliSelect.val('None').trigger('change');
+                }
+            }
+        });
+
+        // Flash animasi feedback visual pada baris
+        entries.forEach(function(e) {
+            e.tr.css('transition', 'background-color 0.4s');
+            e.tr.css('background-color', 'rgba(13, 110, 253, 0.25)');
+            setTimeout(() => e.tr.css('background-color', ''), 900);
+        });
+
+        alert('Berhasil! Peringkat 1 s/d ' + entries.length + ' telah diisi otomatis ke dalam form berdasarkan catatan ' + (isField ? 'jarak terjauh' : 'waktu tercepat') + ' lintas seluruh hit.\n\nKlik "Simpan Semua Hasil" untuk menyimpan ke database.');
+    });
+
     // Reset Semua Waktu & Peringkat pada Form
     $('#btnResetAllTime').on('click', function () {
         if (confirm('Apakah Anda yakin ingin mengosongkan / mereset semua input catatan waktu dan peringkat di tabel ini?')) {
@@ -1141,6 +1515,18 @@ $(document).ready(function () {
         if (e.key === 'Escape') {
             closeScrollPicker();
         }
+    });
+
+    // Toggle Mode Edit / View Mode ketika Acara Selesai
+    $('#btnToggleEditForm, .btn-trigger-edit-mode').on('click', function () {
+        $('#inputFormCard').slideDown(250);
+        $('#viewModeCard').slideUp(200);
+        $('html, body').animate({ scrollTop: $('#inputFormCard').offset().top - 80 }, 300);
+    });
+
+    $('#btnCancelEditMode').on('click', function () {
+        $('#inputFormCard').slideUp(200);
+        $('#viewModeCard').slideDown(250);
     });
 });
 </script>

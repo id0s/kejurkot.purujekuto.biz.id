@@ -8,8 +8,8 @@ _backup/
 backups/
 *.sql
 *.zip
-*.bak
-*.bak.*
+*.bak*
+scratch/
 
 # Composer Dependencies
 /vendor/

@@ -95,6 +95,53 @@
                 </div>
             </div>
 
+                        <!-- Card: Dokumen Akta Kelahiran -->
+            <div class="card-custom mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-file-earmark-person-fill me-2 text-primary"></i> Dokumen Akta Kelahiran (Verifikasi Usia & Keabsahan)
+                    </div>
+                    <?php if (!empty($atlet['akta_file'])): ?>
+                        <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Berkas Server Tersedia</span>
+                    <?php elseif (!empty($atlet['akta_url'])): ?>
+                        <span class="badge bg-primary"><i class="bi bi-google me-1"></i> Google Drive</span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary">Belum Diunggah</span>
+                    <?php endif; ?>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Unggah File Scan / Foto Akte (JPG / PNG / PDF)</label>
+                            <input type="file" name="file_akta" class="form-control" accept=".jpg,.jpeg,.png,.webp,.pdf">
+                            <small class="text-muted">Maksimal 15 MB. Disimpan di direktori privat yang aman (tidak dapat diakses publik langsung).</small>
+                            <?php if (!empty($atlet['akta_file'])): ?>
+                                <div class="mt-2 text-success small">
+                                    <i class="bi bi-check-circle me-1"></i> File saat ini: <code><?= esc($atlet['akta_file']) ?></code>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Atau Tautan Dokumen Google Drive</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent" style="border-color: var(--border-color); color: #0052CC;">
+                                    <i class="bi bi-link-45deg"></i>
+                                </span>
+                                <input type="url" name="akta_url" class="form-control" value="<?= old('akta_url', $atlet['akta_url'] ?? '') ?>" placeholder="https://drive.google.com/file/d/...">
+                            </div>
+                            <small class="text-muted">Tautan hasil pendaftaran online peserta Google Form.</small>
+                            <?php if (!empty($atlet['akta_url'])): ?>
+                                <div class="mt-2 small">
+                                    <a href="<?= esc($atlet['akta_url']) ?>" target="_blank" class="text-primary text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka Tautan Drive Tersimpan
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Card 2: Pendaftaran Multi-Event Lomba (Dropdown Multi-Select) -->
             <div class="card-custom mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">

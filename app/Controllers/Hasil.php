@@ -535,6 +535,23 @@ class Hasil extends BaseController
         }
         ksort($heats);
 
+        // Urutkan peserta di masing-masing Heat berdasarkan performa terbaik
+        foreach ($heats as $hNum => &$hList) {
+            usort($hList, function ($a, $b) use ($isFieldEvent) {
+                $stA = in_array(strtoupper($a['status_prestasi'] ?? ''), ['DNS', 'DNF', 'DQ', 'NM']);
+                $stB = in_array(strtoupper($b['status_prestasi'] ?? ''), ['DNS', 'DNF', 'DQ', 'NM']);
+                if ($stA !== $stB) return $stA ? 1 : -1;
+
+                $valA = $a['nilai_angka'] !== null ? (float)$a['nilai_angka'] : null;
+                $valB = $b['nilai_angka'] !== null ? (float)$b['nilai_angka'] : null;
+                if ($valA !== null && $valB !== null) {
+                    return $isFieldEvent ? ($valB <=> $valA) : ($valA <=> $valB);
+                }
+                return 0;
+            });
+        }
+        unset($hList);
+
         // Buat daftar atlet yang valid dan unranked (DNS/DNF/DQ/NM)
         $validList = [];
         $unrankedList = [];
@@ -606,5 +623,22 @@ class Hasil extends BaseController
             return true;
         }
         return false;
+    }
+
+    /**
+     * Beralih status acara antara Selesai dan Berlangsung
+     */
+    public function toggleStatus(int $eventId)
+    {
+        $event = $this->eventModel->find($eventId);
+        if (!$event) {
+            return redirect()->back()->with('error', 'Acara tidak ditemukan.');
+        }
+
+        $newStatus = ($event['status'] === 'Selesai') ? 'Berlangsung' : 'Selesai';
+        $this->eventModel->update($eventId, ['status' => $newStatus]);
+
+        return redirect()->to(base_url('hasil/input/' . $eventId))
+            ->with('success', "Status Acara #{$event['nomor_acara']} ({$event['nama_acara']}) berhasil diubah menjadi: {$newStatus}");
     }
 }

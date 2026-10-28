@@ -43,10 +43,27 @@ class KejuaraanModel extends Model
      */
     public function getActive(): ?array
     {
-        $active = $this->where('status', 'Aktif')->orderBy('id', 'DESC')->first();
-        if (!$active) {
-            $active = $this->orderBy('id', 'DESC')->first();
+        // 1. Prioritas utama: pilihan manual dari session (Multi-Event Selector)
+        $sessId = session()->get('active_kejuaraan_id');
+        if ($sessId) {
+            $sessKejuaraan = $this->find($sessId);
+            if ($sessKejuaraan) {
+                return $sessKejuaraan;
+            }
         }
-        return $active;
+
+        // 2. Kejuaraan dengan status 'Aktif' (urutan ID terbaru)
+        $active = $this->where('status', 'Aktif')->orderBy('id', 'DESC')->first();
+        if ($active) {
+            return $active;
+        }
+
+        // 3. Fallback: kejuaraan default
+        $fallback = $this->find(1);
+        if ($fallback) {
+            return $fallback;
+        }
+
+        return $this->orderBy('id', 'ASC')->first();
     }
 }

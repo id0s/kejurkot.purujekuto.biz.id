@@ -149,28 +149,53 @@ if (!function_exists('get_label_kota_kabupaten')) {
 }
 
 /**
- * Format Prestasi Seluruh Nomor Lomba agar seragam menjadi format waktu / catatan menit:detik.seperseratus (0:00.00).
- * Contoh: 10.61 -> 0:10.61, 8.93 -> 0:08.93, 6.48 -> 0:06.48, 0.00 / kosong / - -> 0:00.00.
+ * Format Prestasi Piagam:
+ * - Nomor Lapangan (Jarak / Meter: Tolak Peluru, Lempar Lembing, Lempar Cakram, Lompat Jauh, Lompat Tinggi, dsb):
+ *   Diberi satuan meter (contoh: 10.61 m, 5.54 m) dan TANPA awalan 0: karena merupakan jarak/meter.
+ * - Nomor Lintasan (Waktu: Lari, Estafet):
+ *   Diformat menit:detik.seperseratus (contoh: 0:10.61, 0:14.16, 4:42.71).
  */
 if (!function_exists('formatPrestasiPiagam')) {
-    function formatPrestasiPiagam($rawPrestasi, $nomorLomba = ''): string
+    function formatPrestasiPiagam($rawPrestasi, $nomorLomba = '', $satuan = ''): string
     {
         $p = trim((string)$rawPrestasi);
-        if ($p === '') {
-            return '0:00.00';
-        }
 
         $upper = strtoupper($p);
         if (in_array($upper, ['DQ', 'DNS', 'DNF', 'NM', 'DISK', 'DISQ'])) {
             return $upper;
         }
 
-        if (in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
-            return '0:00.00';
+        // Cek apakah nomor lapangan (Jarak / Meter: Tolak Peluru, Lempar Lembing, Lempar Cakram, Lompat Jauh, dsb)
+        $isField = false;
+        $satuanLower = strtolower(trim((string)$satuan));
+        $lombaLower = strtolower(trim((string)$nomorLomba));
+
+        if (in_array($satuanLower, ['jarak', 'meter', 'm'])) {
+            $isField = true;
+        } elseif (preg_match('/(lompat|peluru|lembing|cakram|martil|jump|shot|javelin|discus|hammer)/i', $lombaLower)) {
+            $isField = true;
         }
 
-        // Hapus satuan di ujung seperti m, meter, jarak, dtk, detik, s
-        $cleaned = trim(preg_replace('/\s*(m|meter|jarak|dtk|detik|s)$/i', '', $p));
+        if ($isField) {
+            // Untuk nomor lapangan (meter): tampilkan angka desimal 0.00 langsung saja (tanpa ' m' dan jangan 0:00:00)
+            if ($p === '' || in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
+                return '0.00';
+            }
+            $cleaned = trim(preg_replace('/\s*(m|meter|jarak)$/i', '', $p));
+            // Bersihkan jika ada awalan 0: yang tidak sengaja
+            $cleaned = preg_replace('/^0+:/', '', $cleaned);
+            if (is_numeric($cleaned)) {
+                return number_format((float)$cleaned, 2, '.', '');
+            }
+            return $cleaned;
+        }
+
+        if ($p === '' || in_array($p, ['-', '0', '0.0', '0.00', '00.00', '0:00', '00:00', '0:00.00', '00:00.00'])) {
+            return '-';
+        }
+
+        // Untuk nomor lintasan / lari (waktu)
+        $cleaned = trim(preg_replace('/\s*(dtk|detik|s)$/i', '', $p));
 
         // Format waktu yang sudah memiliki menit:detik misal 23:28.00 atau 3:44.00 atau 0:06.48
         if (preg_match('/^(\d+):(\d{2})(\.\d{1,2})?$/', $cleaned, $m)) {

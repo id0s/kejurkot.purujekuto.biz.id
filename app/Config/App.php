@@ -31,6 +31,19 @@ class App extends BaseConfig
      */
     public array $allowedHostnames = ['kejurkot.diaplikasi.com'];
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        if (isset($_SERVER['HTTP_HOST'])) {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+            $this->baseURL = $scheme . $_SERVER['HTTP_HOST'] . '/';
+            if (!in_array($_SERVER['HTTP_HOST'], $this->allowedHostnames, true)) {
+                $this->allowedHostnames[] = $_SERVER['HTTP_HOST'];
+            }
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Index File

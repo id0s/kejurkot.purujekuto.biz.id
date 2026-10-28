@@ -14,6 +14,7 @@ class AtletModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'kejuaraan_id',
+        'cabor_id',
         'sekolah_id',
         'no_dada',
         'nama',
@@ -21,6 +22,10 @@ class AtletModel extends Model
         'tanggal_lahir',
         'kelompok_umur_id',
         'catatan',
+        'akta_file',
+        'akta_url',
+        'akta_status',
+        'akta_catatan_verifikasi',
     ];
 
     protected bool $allowEmptyInserts = false;
@@ -50,7 +55,7 @@ class AtletModel extends Model
     /**
      * Ambil data atlet lengkap dengan relasi nama sekolah, kelompok umur, dan jumlah event
      */
-    public function getAtletWithDetails(?int $kejuaraanId = null, ?int $sekolahId = null, ?string $search = null): array
+    public function getAtletWithDetails(?int $kejuaraanId = null, ?int $sekolahId = null, ?string $search = null, ?int $caborId = null): array
     {
         $builder = $this->db->table($this->table . ' a')
             ->select('a.*, s.nama as nama_sekolah, s.jenjang, ku.nama as nama_ku, COUNT(pe.id) as total_event')
@@ -61,6 +66,10 @@ class AtletModel extends Model
 
         if ($kejuaraanId) {
             $builder->where('a.kejuaraan_id', $kejuaraanId);
+        }
+
+        if ($caborId) {
+            $builder->where('a.cabor_id', $caborId);
         }
 
         if ($sekolahId) {

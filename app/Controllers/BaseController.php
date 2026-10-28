@@ -47,6 +47,7 @@ abstract class BaseController extends Controller
 
         // Data default untuk seluruh view
         $this->data['activeKejuaraan'] = $this->activeKejuaraan;
+        $this->data['allKejuaraans']   = $kejuaraanModel->orderBy('tahun', 'DESC')->orderBy('id', 'DESC')->findAll();
         $this->data['session']         = $this->session;
 
         // Standarisasi otomatis nama nomor lomba dan nama acara jika ada yang belum seragam
@@ -122,21 +123,7 @@ abstract class BaseController extends Controller
                 }
             }
 
-            // 3. Otomatis ubah nama kejuaraan yang masih berbau Kejurkot menjadi Kejurwil
-            $kejuaraans = $db->table('kejuaraan')->get()->getResultArray();
-            foreach ($kejuaraans as $kj) {
-                $namaKj = $kj['nama'];
-                if (stripos($namaKj, 'kejurkot') !== false) {
-                    $newNamaKj = str_ireplace('kejurkot', 'KEJURWIL', $namaKj);
-                    $newDesc   = str_ireplace('kejurkot', 'Kejurwil', $kj['deskripsi'] ?? '');
-                    $newDesc   = str_ireplace('se-Kota Pekalongan', 'Wilayah Eks-Karesidenan Pekalongan dan Sekitarnya', $newDesc);
-                    $db->table('kejuaraan')->where('id', $kj['id'])->update([
-                        'nama'      => $newNamaKj,
-                        'deskripsi' => $newDesc,
-                    ]);
-                    $changed++;
-                }
-            }
+            // 3. Multi-event ready (nama kejuaraan dikelola manual melalui modul Kejuaraan)
 
             // 4. Update nama user admin jika masih bertuliskan Kejurkot
             $db->table('users')->where('nama_lengkap', 'Administrator Kejurkot')->update(['nama_lengkap' => 'Administrator Kejurwil']);

@@ -73,8 +73,12 @@ class Atlet extends BaseController
             }
         }
 
-        $this->data['atlets']      = $this->atletModel->getAtletWithDetails($kejuaraanId, $sekolahId, $search);
-        $this->data['sekolahs']    = $this->sekolahModel->orderBy('nama', 'ASC')->findAll();
+        $sessionRole = session()->get('role');
+        $sessionCaborId = session()->get('cabor_id');
+        $filterCaborId = ($sessionRole === 'admin_cabor' && $sessionCaborId) ? (int)$sessionCaborId : null;
+
+        $this->data['atlets']          = $this->atletModel->getAtletWithDetails($kejuaraanId, $sekolahId, $search, $filterCaborId);
+        $this->data['sekolahs']        = $this->sekolahModel->orderBy('nama', 'ASC')->findAll();
         $this->data['selectedSekolah'] = $sekolahId;
 
         // Ambil daftar event per atlet untuk ditampilkan di tabel
@@ -176,6 +180,26 @@ class Atlet extends BaseController
             'kelompok_umur_id' => $kuId,
             'catatan'          => $this->request->getPost('catatan'),
         ];
+
+        $aktaUrl = trim((string)$this->request->getPost('akta_url'));
+        if (!empty($aktaUrl)) {
+            $atletData['akta_url'] = $aktaUrl;
+        }
+
+        $fileAkta = $this->request->getFile('file_akta');
+        if ($fileAkta && $fileAkta->isValid() && !$fileAkta->hasMoved()) {
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+            if (in_array($fileAkta->getMimeType(), $allowedMimes)) {
+                $storageDir = WRITEPATH . 'uploads/akta';
+                if (!is_dir($storageDir)) {
+                    mkdir($storageDir, 0755, true);
+                }
+                $ext = strtolower($fileAkta->getClientExtension());
+                $safeName = 'akta_' . ($id ?: time()) . '_' . preg_replace('/[^a-zA-Z0-9_]/', '_', strtolower($atletData['nama'])) . '.' . $ext;
+                $fileAkta->move($storageDir, $safeName, true);
+                $atletData['akta_file'] = $safeName;
+            }
+        }
 
         if ($id) {
             $this->atletModel->update($id, $atletData);
@@ -490,4 +514,321 @@ class Atlet extends BaseController
         }
         return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal mengunggah file. Pastikan file gambar valid.']);
     }
+
+    /**
+     * Halaman Pendaftaran Massal Atlet & Multi-Nomor Lomba
+     */
+    public function batchRegister()
+    {
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? 1;
+        $sessionRole = session()->get('role');
+        $sessionCaborId = session()->get('cabor_id');
+
+        $caborModel = new \App\Models\CaborModel();
+        $caborList = $caborModel->getActiveCabor();
+
+        $selectedCaborId = ($sessionRole === 'admin_cabor' && $sessionCaborId) ? (int)$sessionCaborId : (int)($this->request->getGet('cabor_id') ?? 1);
+
+        $sekolahs = $this->sekolahModel->orderBy('nama', 'ASC')->findAll();
+        $kelompokUmurs = $this->kuModel->orderBy('usia_min', 'ASC')->findAll();
+
+        // Ambil daftar event/nomor lomba untuk kejuaraan ini
+        $events = $this->eventModel
+            ->select('event.*, nomor_lomba.nama as nama_lomba, nomor_lomba.kategori as kategori_lomba, nomor_lomba.cabor_id, kelompok_umur.nama as nama_ku, kelompok_umur.usia_min, kelompok_umur.usia_max')
+            ->join('nomor_lomba', 'nomor_lomba.id = event.nomor_lomba_id')
+            ->join('kelompok_umur', 'kelompok_umur.id = event.kelompok_umur_id', 'left')
+            ->where('event.kejuaraan_id', $kejuaraanId)
+            ->orderBy('event.nomor_acara', 'ASC')
+            ->findAll();
+
+        return view('atlet/batch_register', [
+            'title'           => 'Pendaftaran Massal Atlet & Multi-Lomba',
+            'activeKejuaraan' => $this->activeKejuaraan,
+            'sekolahs'        => $sekolahs,
+            'kelompokUmurs'   => $kelompokUmurs,
+            'events'          => $events,
+            'caborList'       => $caborList,
+            'selectedCaborId' => $selectedCaborId,
+            'sessionRole'     => $sessionRole,
+        ]);
+    }
+
+    /**
+     * Proses Simpan Pendaftaran Massal Atlet & Multi-Lomba
+     */
+    public function batchRegisterSave()
+    {
+        $db = \Config\Database::connect();
+        $kejuaraanId = (int)($this->activeKejuaraan['id'] ?? 1);
+
+        $sessionRole = session()->get('role');
+        $sessionCaborId = session()->get('cabor_id');
+        $caborId = ($sessionRole === 'admin_cabor' && $sessionCaborId) ? (int)$sessionCaborId : (int)($this->request->getPost('cabor_id') ?? 1);
+
+        // Kontingen / Sekolah handling
+        $sekolahId = $this->request->getPost('sekolah_id');
+        $namaSekolahBaru = trim($this->request->getPost('nama_sekolah_baru') ?? '');
+        $jenjangBaru = trim($this->request->getPost('jenjang_sekolah_baru') ?? 'SD/MI');
+
+        if ($sekolahId === 'new' || empty($sekolahId)) {
+            if (empty($namaSekolahBaru)) {
+                return redirect()->back()->withInput()->with('error', 'Nama kontingen / sekolah wajib diisi.');
+            }
+            $sekolahId = $this->sekolahModel->getOrCreate($namaSekolahBaru, $jenjangBaru);
+        } else {
+            $sekolahId = (int)$sekolahId;
+        }
+
+        $atlets = $this->request->getPost('atlets');
+        if (!is_array($atlets) || empty($atlets)) {
+            return redirect()->back()->withInput()->with('error', 'Tidak ada baris atlet yang dikirim.');
+        }
+
+        $uploadedFiles = $this->request->getFiles();
+
+        $insertedAtletCount = 0;
+        $insertedEventCount = 0;
+        $errors = [];
+
+        $db->transStart();
+
+        foreach ($atlets as $index => $row) {
+            $nama = trim($row['nama'] ?? '');
+            if (empty($nama)) {
+                continue; // Lewati baris kosong
+            }
+
+            $gender = in_array($row['gender'] ?? '', ['L', 'P']) ? $row['gender'] : 'L';
+            $tglLahir = !empty($row['tanggal_lahir']) ? $row['tanggal_lahir'] : null;
+
+            // Hitung KU
+            $kuId = !empty($row['kelompok_umur_id']) ? (int)$row['kelompok_umur_id'] : null;
+            if (!$kuId && $tglLahir) {
+                $kuId = $this->kuModel->hitungKUOtomatis($tglLahir);
+            }
+
+            // No Dada
+            $noDada = !empty($row['no_dada']) ? trim($row['no_dada']) : null;
+            if ($noDada && is_numeric($noDada)) {
+                $noDada = str_pad($noDada, 3, '0', STR_PAD_LEFT);
+            }
+
+            $aktaUrl = trim($row['akta_url'] ?? '');
+            $aktaFile = null;
+            $aktaStatus = !empty($aktaUrl) ? 'menunggu_verifikasi' : 'belum_upload';
+
+            // Cek file upload akta untuk baris ini
+            if (isset($uploadedFiles['akta_files'][$index])) {
+                $file = $uploadedFiles['akta_files'][$index];
+                if ($file && $file->isValid() && !$file->hasMoved()) {
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+                    if (in_array($file->getMimeType(), $allowedMimes)) {
+                        $storageDir = WRITEPATH . 'uploads/akta';
+                        if (!is_dir($storageDir)) {
+                            mkdir($storageDir, 0755, true);
+                        }
+                        $ext = strtolower($file->getClientExtension());
+                        $safeName = 'akta_' . time() . '_' . $index . '_' . preg_replace('/[^a-zA-Z0-9_]/', '_', strtolower($nama)) . '.' . $ext;
+                        $file->move($storageDir, $safeName, true);
+                        $aktaFile = $safeName;
+                        $aktaStatus = 'menunggu_verifikasi';
+                    }
+                }
+            }
+
+            $atletData = [
+                'kejuaraan_id'            => $kejuaraanId,
+                'cabor_id'                => $caborId,
+                'sekolah_id'              => $sekolahId,
+                'nama'                    => $nama,
+                'gender'                  => $gender,
+                'tanggal_lahir'           => $tglLahir,
+                'kelompok_umur_id'        => $kuId,
+                'no_dada'                 => $noDada,
+                'akta_file'               => $aktaFile,
+                'akta_url'                => !empty($aktaUrl) ? $aktaUrl : null,
+                'akta_status'             => $aktaStatus,
+                'catatan'                 => trim($row['catatan'] ?? ''),
+            ];
+
+            $atletId = (int)$this->atletModel->insert($atletData);
+            if ($atletId) {
+                $insertedAtletCount++;
+
+                // Simpan pendaftaran multi-lomba
+                $eventIds = $row['events'] ?? [];
+                if (is_array($eventIds)) {
+                    foreach ($eventIds as $eventId) {
+                        $eventId = (int)$eventId;
+                        if ($eventId > 0) {
+                            $this->pesertaModel->insert([
+                                'event_id' => $eventId,
+                                'atlet_id' => $atletId,
+                            ]);
+                            $insertedEventCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false || $insertedAtletCount === 0) {
+            return redirect()->back()->withInput()->with('error', 'Pendaftaran gagal disimpan atau tidak ada data atlet yang valid.');
+        }
+
+        $successMsg = "Berhasil mendaftarkan {$insertedAtletCount} atlet dengan total {$insertedEventCount} keikutsertaan nomor lomba!";
+        return redirect()->to(base_url('atlet'))->with('success', $successMsg);
+    }
+
+    /**
+     * Halaman Verifikasi Keabsahan Akta Kelahiran
+     */
+    public function verifikasiAkta()
+    {
+        $kejuaraanId = $this->activeKejuaraan['id'] ?? 1;
+        $sessionRole = session()->get('role');
+        $sessionCaborId = session()->get('cabor_id');
+
+        $statusFilter = $this->request->getGet('status');
+        $sekolahId = $this->request->getGet('sekolah_id') ? (int)$this->request->getGet('sekolah_id') : null;
+        $search = trim($this->request->getGet('search') ?? '');
+
+        $builder = $this->atletModel
+            ->select('atlet.*, sekolah.nama as nama_sekolah, kelompok_umur.nama as nama_ku, kelompok_umur.usia_min, kelompok_umur.usia_max, cabor.nama as cabor_nama')
+            ->join('sekolah', 'sekolah.id = atlet.sekolah_id', 'left')
+            ->join('kelompok_umur', 'kelompok_umur.id = atlet.kelompok_umur_id', 'left')
+            ->join('cabor', 'cabor.id = atlet.cabor_id', 'left')
+            ->where('atlet.kejuaraan_id', $kejuaraanId);
+
+        if ($sessionRole === 'admin_cabor' && $sessionCaborId) {
+            $builder->where('atlet.cabor_id', (int)$sessionCaborId);
+        }
+
+        if ($statusFilter && in_array($statusFilter, ['belum_upload', 'menunggu_verifikasi', 'valid', 'perlu_perbaikan'])) {
+            $builder->where('atlet.akta_status', $statusFilter);
+        }
+
+        if ($sekolahId) {
+            $builder->where('atlet.sekolah_id', $sekolahId);
+        }
+
+        if ($search) {
+            $builder->groupStart()
+                    ->like('atlet.nama', $search)
+                    ->orLike('atlet.no_dada', $search)
+                    ->orLike('sekolah.nama', $search)
+                    ->groupEnd();
+        }
+
+        $atletList = $builder->orderBy('atlet.id', 'DESC')->findAll();
+
+        // Hitung statistik akta
+        $statBuilder = $this->atletModel->where('kejuaraan_id', $kejuaraanId);
+        if ($sessionRole === 'admin_cabor' && $sessionCaborId) {
+            $statBuilder->where('cabor_id', (int)$sessionCaborId);
+        }
+        $allStats = $statBuilder->findAll();
+
+        $stats = [
+            'total'               => count($allStats),
+            'menunggu_verifikasi' => 0,
+            'valid'               => 0,
+            'perlu_perbaikan'     => 0,
+            'belum_upload'        => 0,
+        ];
+
+        foreach ($allStats as $a) {
+            $st = $a['akta_status'] ?? 'belum_upload';
+            if (isset($stats[$st])) {
+                $stats[$st]++;
+            } else {
+                $stats['belum_upload']++;
+            }
+        }
+
+        $sekolahs = $this->sekolahModel->orderBy('nama', 'ASC')->findAll();
+
+        return view('atlet/verifikasi_akta', [
+            'title'        => 'Verifikasi Keabsahan Akta Kelahiran Atlet',
+            'atletList'    => $atletList,
+            'stats'        => $stats,
+            'sekolahs'     => $sekolahs,
+            'statusFilter' => $statusFilter,
+            'sekolahId'    => $sekolahId,
+            'search'       => $search,
+        ]);
+    }
+
+    /**
+     * AJAX/POST Update Status Verifikasi Akta
+     */
+    public function updateAktaStatus()
+    {
+        $atletId = (int)$this->request->getPost('atlet_id');
+        $status = $this->request->getPost('akta_status');
+        $catatan = trim($this->request->getPost('catatan') ?? '');
+
+        if (!in_array($status, ['valid', 'perlu_perbaikan', 'menunggu_verifikasi', 'belum_upload'])) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Status tidak valid.']);
+        }
+
+        $atlet = $this->atletModel->find($atletId);
+        if (!$atlet) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Atlet tidak ditemukan.']);
+        }
+
+        $this->atletModel->update($atletId, [
+            'akta_status'             => $status,
+            'akta_catatan_verifikasi' => $catatan,
+        ]);
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => 'Status verifikasi akta berhasil diperbarui.',
+            'new_status' => $status,
+        ]);
+    }
+
+    /**
+     * Tampilkan berkas akta kelahiran atlet secara aman (gambar/PDF)
+     */
+    public function viewAktaFile(int $atletId)
+    {
+        $atlet = $this->atletModel->find($atletId);
+        if (!$atlet || empty($atlet['akta_file'])) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Dokumen tidak ditemukan.');
+        }
+
+        $filename = basename($atlet['akta_file']);
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $filename)) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('File tidak valid.');
+        }
+
+        $baseDir = realpath(WRITEPATH . 'uploads/akta');
+        $filePath = realpath($baseDir . DIRECTORY_SEPARATOR . $filename);
+
+        if (!$filePath || strpos($filePath, $baseDir) !== 0 || !is_file($filePath)) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Dokumen tidak ditemukan.');
+        }
+
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mime = 'application/octet-stream';
+        if (in_array($ext, ['jpg', 'jpeg'])) {
+            $mime = 'image/jpeg';
+        } elseif ($ext === 'png') {
+            $mime = 'image/png';
+        } elseif ($ext === 'webp') {
+            $mime = 'image/webp';
+        } elseif ($ext === 'pdf') {
+            $mime = 'application/pdf';
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
+            ->setBody(file_get_contents($filePath));
+    }
 }
+

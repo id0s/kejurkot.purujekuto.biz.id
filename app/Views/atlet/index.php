@@ -8,21 +8,29 @@
         <p class="text-muted small mb-0">Total <?= count($atlets) ?> atlet terdaftar pada kejuaraan aktif</p>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="<?= base_url('atlet/batch-register') ?>" class="btn btn-success fw-bold text-white d-inline-flex align-items-center gap-2 shadow-sm">
+            <i class="bi bi-person-plus-fill"></i>
+            <span>Pendaftaran Massal (Form Baru)</span>
+        </a>
+        <a href="<?= base_url('atlet/verifikasi-akta') ?>" class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-check-fill"></i>
+            <span>Verifikasi Akta</span>
+        </a>
         <a href="<?= base_url('atlet/cetak-nomor-lomba') ?>" target="_blank" class="btn btn-warning fw-bold text-dark d-inline-flex align-items-center gap-2 shadow-sm">
             <i class="bi bi-printer-fill"></i>
             <span>Desain & Cetak Nomor Lomba</span>
         </a>
         <button type="button" class="btn btn-outline-warning fw-bold d-inline-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGenerateNoDada">
             <i class="bi bi-123 fs-5"></i>
-            <span>Generate No Dada (Per Sekolah)</span>
+            <span>Generate No Dada</span>
         </button>
         <a href="<?= base_url('atlet/import') ?>" class="btn btn-secondary-custom d-inline-flex align-items-center gap-2">
             <i class="bi bi-file-earmark-arrow-up text-success"></i>
             <span>Import Excel</span>
         </a>
         <a href="<?= base_url('atlet/create') ?>" class="btn btn-primary-gradient d-inline-flex align-items-center gap-2">
-            <i class="bi bi-person-plus-fill"></i>
-            <span>Daftar Atlet Baru</span>
+            <i class="bi bi-plus-lg"></i>
+            <span>Daftar Single</span>
         </a>
     </div>
 </div>
@@ -63,6 +71,7 @@
                         <th>Asal Sekolah</th>
                         <th class="text-center">Gender</th>
                         <th>Tgl Lahir</th>
+                        <th>Status Akta</th>
                         <th>Nomor Lomba Diikuti</th>
                         <th class="text-center" width="100">Aksi</th>
                     </tr>
@@ -103,6 +112,27 @@
                                 <div><?= $a['tanggal_lahir'] ? esc($a['tanggal_lahir']) : '<span class="text-muted">-</span>' ?></div>
                                 <?php if (!empty($a['nama_ku'])): ?>
                                     <span class="badge badge-purple small"><?= esc($a['nama_ku']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php
+                                $st = $a['akta_status'] ?? 'belum_upload';
+                                if ($st === 'valid'): ?>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5" style="font-size: 11px;">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Valid
+                                    </span>
+                                <?php elseif ($st === 'menunggu_verifikasi'): ?>
+                                    <a href="<?= base_url('atlet/verifikasi-akta?status=menunggu_verifikasi') ?>" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5 text-decoration-none" style="font-size: 11px;" title="Klik untuk verifikasi">
+                                        <i class="bi bi-hourglass-split me-1"></i> Menunggu
+                                    </a>
+                                <?php elseif ($st === 'perlu_perbaikan'): ?>
+                                    <a href="<?= base_url('atlet/verifikasi-akta?status=perlu_perbaikan') ?>" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 text-decoration-none" style="font-size: 11px;" title="Klik untuk lihat catatan perbaikan">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Perbaikan
+                                    </a>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-0.5" style="font-size: 11px;">
+                                        Belum Upload
+                                    </span>
                                 <?php endif; ?>
                             </td>
                             <td>

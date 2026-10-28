@@ -91,4 +91,165 @@ class Kejuaraan extends BaseController
         $this->kejuaraanModel->delete($id);
         return redirect()->to(base_url('kejuaraan'))->with('success', 'Data kejuaraan berhasil dihapus.');
     }
+
+    /**
+     * Ganti kejuaraan aktif untuk sesi kerja saat ini (Multi-Event Selector)
+     */
+    public function switch(int $id)
+    {
+        $kejuaraan = $this->kejuaraanModel->find($id);
+        if (!$kejuaraan) {
+            return redirect()->back()->with('error', 'Kejuaraan tidak ditemukan.');
+        }
+
+        // Simpan kejuaraan aktif di sesi pengguna
+        session()->set('active_kejuaraan_id', $id);
+
+        $referrer = $this->request->getServer('HTTP_REFERER');
+        if ($referrer && !str_contains($referrer, 'switch')) {
+            return redirect()->to($referrer)->with('success', "Kejuaraan aktif dialihkan ke: {$kejuaraan['nama']}");
+        }
+
+        return redirect()->to(base_url('dashboard'))->with('success', "Kejuaraan aktif dialihkan ke: {$kejuaraan['nama']}");
+    }
+
+    /**
+     * Update cepat tanggal kejuaraan langsung (dari halaman Piagam / Topbar)
+     */
+    public function updateTanggal()
+    {
+        $kejuaraanId = (int)($this->request->getPost('kejuaraan_id') ?: session()->get('active_kejuaraan_id') ?: 1);
+        $tanggalInput = trim((string)$this->request->getPost('tanggal'));
+        $tanggalSelesaiInput = trim((string)$this->request->getPost('tanggal_selesai'));
+        $tempatInput = trim((string)$this->request->getPost('tempat'));
+        $namaInput = trim((string)$this->request->getPost('nama'));
+
+        if (empty($tanggalInput)) {
+            $msg = 'Tanggal kejuaraan tidak boleh kosong.';
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $msg]);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $parsedMulai = $this->parseIndonesianDate($tanggalInput);
+        if (!$parsedMulai) {
+            $msg = "Format tanggal '{$tanggalInput}' tidak dikenali. Gunakan format YYYY-MM-DD atau '27 September 2026'.";
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $msg]);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $parsedSelesai = !empty($tanggalSelesaiInput) ? ($this->parseIndonesianDate($tanggalSelesaiInput) ?: $parsedMulai) : $parsedMulai;
+
+        $updateData = [
+            'tanggal_mulai'   => $parsedMulai,
+            'tanggal_selesai' => $parsedSelesai,
+        ];
+        if (!empty($tempatInput)) {
+            $updateData['tempat'] = $tempatInput;
+        }
+        if (!empty($namaInput)) {
+            $updateData['nama'] = $namaInput;
+        }
+
+        $this->kejuaraanModel->update($kejuaraanId, $updateData);
+
+        // Update tanggal di tabel piagam_custom dan event jika ada data terkait
+        $db = \Config\Database::connect();
+        $tglFormatted = $this->formatTanggalIndo($parsedMulai);
+
+        // Update jadwal_hari di event agar sinkron dengan jadwal lomba
+        $hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $namaHari = $hariIndo[(int)date('w', strtotime($parsedMulai))];
+        $jadwalHariStr = "{$namaHari}, {$tglFormatted}";
+        $db->table('event')->where('kejuaraan_id', $kejuaraanId)->update(['jadwal_hari' => $jadwalHariStr]);
+
+        // Update di tabel piagam_custom jika ada
+        $piagamCustomUp = ['tanggal' => $tglFormatted];
+        if (!empty($updateData['tempat'])) {
+            $piagamCustomUp['tempat'] = $updateData['tempat'];
+        }
+        $db->table('piagam_custom')->where('kejuaraan_id', $kejuaraanId)->update($piagamCustomUp);
+
+        $successMsg = "Tanggal kejuaraan berhasil disimpan ke database: {$tglFormatted}";
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status'            => 'success',
+                'message'           => $successMsg,
+                'tanggal_mulai'     => $parsedMulai,
+                'tanggal_formatted' => $tglFormatted,
+                'tempat'            => $updateData['tempat'] ?? null,
+                'kejuaraan_id'      => $kejuaraanId
+            ]);
+        }
+
+        return redirect()->back()->with('success', $successMsg);
+    }
+
+    /**
+     * Helper: Parse string tanggal Indonesia atau standar ke format YYYY-MM-DD
+     */
+    public function parseIndonesianDate(string $s): ?string
+    {
+        $s = trim($s);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $s)) {
+            return $s;
+        }
+
+        $months = [
+            'januari' => '01', 'jan' => '01',
+            'februari' => '02', 'feb' => '02',
+            'maret' => '03', 'mar' => '03',
+            'april' => '04', 'apr' => '04',
+            'mei' => '05', 'may' => '05',
+            'juni' => '06', 'jun' => '06',
+            'juli' => '07', 'jul' => '07',
+            'agustus' => '08', 'agu' => '08', 'ags' => '08',
+            'september' => '09', 'sep' => '09', 'sept' => '09',
+            'oktober' => '10', 'okt' => '10',
+            'november' => '11', 'nov' => '11',
+            'desember' => '12', 'des' => '12',
+        ];
+
+        if (preg_match('/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/', $s, $m)) {
+            $day = (int)$m[1];
+            $monthStr = strtolower($m[2]);
+            $year = $m[3];
+            if (isset($months[$monthStr])) {
+                return sprintf('%s-%s-%02d', $year, $months[$monthStr], $day);
+            }
+        }
+
+        if (preg_match('/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/', $s, $m)) {
+            $day = (int)$m[1];
+            $month = (int)$m[2];
+            $year = $m[3];
+            return sprintf('%s-%02d-%02d', $year, $month, $day);
+        }
+
+        $time = strtotime($s);
+        if ($time !== false && $time > 0) {
+            return date('Y-m-d', $time);
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper: Format tanggal standar ke bahasa Indonesia
+     */
+    public function formatTanggalIndo(string $dateStr): string
+    {
+        $time = strtotime($dateStr);
+        if (!$time) return $dateStr;
+        $bulanIndo = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+        return date('j', $time) . ' ' . ($bulanIndo[(int)date('n', $time)] ?? '') . ' ' . date('Y', $time);
+    }
 }
