@@ -1,35 +1,71 @@
 # Environment Configuration & Secrets
 .env
-.env.production
-.env.local
+.env.*
+!.env.example
 
-# Backups & SQL Dumps (Contains sensitive personal participant data)
+# Backups, Dumps & Scratch Files
 _backup/
 backups/
+scratch/
 *.sql
 *.zip
+*.tar.gz
 *.bak*
-scratch/
 
-# Composer Dependencies
-/vendor/
-composer.phar
+# Documents, Spreadsheets & Participant Data (Bukan Kode)
+template-kejurkot-excel/
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.docx
+*.doc
 
-# CodeIgniter Writable & Cache Files
+# User Uploads & Media (Bukan Kode)
+/public/uploads/*
+!/public/uploads/index.html
+!/public/uploads/.gitkeep
+
+# CodeIgniter Writable & Runtime Files (Bukan Kode)
 /writable/cache/*
 !/writable/cache/index.html
+!/writable/cache/.gitkeep
 /writable/debugbar/*
 !/writable/debugbar/index.html
+!/writable/debugbar/.gitkeep
 /writable/logs/*
 !/writable/logs/index.html
+!/writable/logs/.gitkeep
 /writable/session/*
 !/writable/session/index.html
+!/writable/session/.gitkeep
 /writable/uploads/*
 !/writable/uploads/index.html
+!/writable/uploads/.gitkeep
+/writable/temp_piagam/
+/writable/*.json
+/writable/*.html
+/writable/*.txt
+/writable/*.php
+!/writable/index.html
+!/writable/.htaccess
 
 # Generated Downloads
 /public/downloads/*
 !/public/downloads/index.html
+!/public/downloads/.gitkeep
+
+# Screenshots & Loose Images at root (Bukan Kode)
+/*.[pP][nN][gG]
+/*.[jJ][pP][gG]
+/*.[jJ][pP][eE][gG]
+/*.[gG][iI][fF]
+/*.[wW][eE][bB][pP]
+
+
+# Composer Dependencies
+/vendor/
+composer.phar
 
 # Local IDE / OS Files
 .DS_Store
