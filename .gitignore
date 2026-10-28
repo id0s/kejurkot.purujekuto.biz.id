@@ -62,6 +62,18 @@ template-kejurkot-excel/
 /*.[gG][iI][fF]
 /*.[wW][eE][bB][pP]
 
+# Asset Images: Pertahankan hanya logo resmi UI & ttd yang dipakai di kode, abaikan gambar uji coba
+/public/assets/images/*
+!/public/assets/images/pasi-logo.png
+!/public/assets/images/pasi_logo_transparent.png
+!/public/assets/images/ttd_zaini_pasi_pekalongan.png
+!/public/assets/images/ttd1_pasi_combined.png
+!/public/assets/images/ttd_jumanto_clean.png
+!/public/assets/images/ttd_rumini_clean.png
+!/public/assets/images/rumini_exact_stamp_sig.png
+!/public/assets/images/rumini_full_block.png
+!/public/assets/images/crop_rumini_stamp_scribble.png
+
 
 # Composer Dependencies
 /vendor/
